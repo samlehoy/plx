@@ -2,6 +2,13 @@
 .env
 conversion_report*.csv
 __pycache__/
+node_modules/
+dist/
+*.tgz
+coverage/
+.DS_Store
+
+# Local credentials/session files
 .spotify_token.json
 .deezer_config.json
 .converter_settings.json
