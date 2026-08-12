@@ -1,0 +1,7 @@
+.venv/
+.env
+conversion_report*.csv
+__pycache__/
+.spotify_token.json
+.deezer_config.json
+.converter_settings.json
