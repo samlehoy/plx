@@ -4,13 +4,15 @@ Source of truth for the system's design and its external contracts. Read this be
 
 ## Goal
 
-`plx` is a personal Spotify → Deezer playlist converter distributed as a CLI (`npm install -g plx`). It reads a Spotify playlist **without a Spotify account, Premium, or OAuth**:
+`plx` is a personal Spotify ⇄ Deezer playlist converter distributed as a CLI (`npm install -g plx`). It reads a Spotify playlist **without a Spotify account, Premium, or OAuth**:
 
 ```bash
 plx --url "https://open.spotify.com/playlist/PLAYLIST_ID" --dry-run
 ```
 
-The only credential the whole tool needs is a **Deezer ARL cookie** (to write playlists).
+Both directions are supported:
+- **Spotify → Deezer** — reads Spotify anonymously, writes via a Deezer `arl` cookie.
+- **Deezer → Spotify** — reads via `arl`, writes via a Spotify `sp_dc` web-session cookie.
 
 ## Flow
 
@@ -32,21 +34,24 @@ CLI args (args.ts)
 write Deezer playlist (GraphQL)   +   write CSV report (csv.ts)
 ```
 
-Two decoupled halves:
-- **Read** (Spotify) — `src/spotify.ts`. Produces `Track[] { name, artist, durationMs }`. No auth.
+Three decoupled halves:
+- **Read** (Spotify) — `src/spotify.ts`. Produces `Track[] { name, artist, durationMs }`. Anonymous (no auth) for the forward flow.
 - **Match & Write** (Deezer) — `src/converter.ts` + `src/deezer.ts`. Matches to Deezer track ids, creates playlists, writes the CSV report.
+- **Reverse** (Deezer → Spotify) — `src/reverse.ts`. Reads a Deezer playlist, matches to Spotify URIs, writes via a `sp_dc`-minted token.
 
-They meet only in `Converter` (`src/converter.ts`), which is why the parity tests mock each half's `fetch`.
+They meet only in `Converter` (`src/converter.ts`) and `reverse.ts`, which is why the parity tests mock each half's `fetch`.
 
 ## Module map
 
 | File | Responsibility |
 |---|---|
-| `src/cli.ts` | Entry. Arg parsing dispatch, interactive menu (`@clack/prompts`), ARL prompt/persist. |
+| `src/cli.ts` | Entry. Arg parsing dispatch, interactive menu (`@clack/prompts`), ARL/`sp_dc` prompt + semi-auto fill + persist. |
 | `src/args.ts` | Pure typed CLI parsing → `CliOptions`. No I/O. |
-| `src/config.ts` | Config dir + `credentials.json` read/write (Deezer ARL only). |
-| `src/spotify.ts` | Anonymous token, Pathfinder fetch, embed fallback. No OAuth. |
+| `src/config.ts` | Config dir + `credentials.json` read/write (`deezerArl`, `spotifyDc`), `tryAutoFillCredentials`. |
+| `src/browser.ts` | Reads `arl`/`sp_dc` from a logged-in browser (Chromium family decrypt + Safari binarycookies parse). macOS only. |
+| `src/spotify.ts` | Anonymous token, Pathfinder fetch, embed fallback, and `authenticatedToken(spDc)` (TOTP) + search/write/list for the reverse flow. |
 | `src/deezer.ts` | ARL→JWT auth, GraphQL mutations, public search. |
+| `src/reverse.ts` | Deezer → Spotify orchestration: `reverseMatch`, `reverseConvert`, `reverseWriteToExisting`. |
 | `src/converter.ts` | Orchestrates read → match → report; retry; CSV rows. |
 | `src/matcher.ts` | Pure normalization + tiered matching. No I/O. |
 | `src/csv.ts` | CSV escaping/writing. |
@@ -61,9 +66,14 @@ The project intentionally uses **unofficial web endpoints**. They can change wit
 
 | Surface | Endpoint | Fragility | Constant |
 |---|---|---|---|
-| Anonymous token | `https://open.spotify.com/embed/track/...` → `__NEXT_DATA__` → `props.pageProps.state.settings.session.accessToken` | Embed HTML shape can change | `FETCH_PLAYLIST_SHA` |
+| Anonymous token | `https://open.spotify.com/embed/track/...` → `__NEXT_DATA__` → `props.pageProps.state.settings.session.accessToken` | Embed HTML shape can change | — |
+| Authenticated token | `GET https://open.spotify.com/api/token?reason=transport&productType=web-player&totp=<otp>&totpServer=<otp>&totpVer=<v>` with `Cookie: sp_dc=…` (TOTP = HMAC-SHA1 over the rotating "nuance" secret + `/api/server-time`) | Full search+write scope; the embed token is read-only and must NOT be used for writes | — |
 | Playlist tracks (full) | `https://api-partner.spotify.com/pathfinder/v1/query` — persisted query `fetchPlaylist` | **The `sha256Hash` rotates periodically.** If you see `PersistedQueryNotFound`, grab a fresh hash from the web player's DevTools Network tab. | `FETCH_PLAYLIST_SHA` |
 | Playlist tracks (fallback) | `https://open.spotify.com/embed/playlist/{id}` → `trackList` | Capped at **100** tracks (`EMBED_TRACK_LIMIT`). Used only when Pathfinder fails. | `EMBED_TRACK_LIMIT` |
+| Search tracks | Pathfinder **v2** `POST /pathfinder/v2/query`, `operationName: "searchTracks"` | Hash rotates (see above) | `SEARCH_TRACKS_SHA` |
+| Create playlist | REST `POST https://spclient.wg.spotify.com/playlist/v2/playlist?format=json` | No persisted-query hash | — |
+| Add tracks | Pathfinder **v2**, `operationName: "addToPlaylist"` | Hash rotates | `ADD_TO_PLAYLIST_SHA` |
+| List playlists | Pathfinder **v2**, `operationName: "libraryV3"` | Hash rotates | `LIBRARY_V3_SHA` |
 
 ### Deezer
 
@@ -78,7 +88,7 @@ The project intentionally uses **unofficial web endpoints**. They can change wit
 1. **Duration unit conversion** — Spotify reports milliseconds, Deezer seconds. `matchDurationMs` compares `spotifyMs` vs `deezerSec * 1000`. Comparing raw units rejects every correct match.
 2. **Free-text Deezer search** — `searchQuery` uses free words (`"artist title"`), NOT `artist:"..." track:"..."` field syntax. Measured on real playlists: field syntax matched 9/19 tracks, free text 19/19.
 3. **Embed fallback truncation** — when `result.truncated`, a report row `PERINGATAN: terpotong di 100 lagu` is recorded. This matches the Python reference.
-4. **No Spotify credentials** — the tool reads Spotify anonymously. There is no OAuth, no Spotify Client ID/Secret, no Spotify account requirement.
+4. **No Spotify Developer account / OAuth** — reading is anonymous; the reverse flow uses a personal `sp_dc` web-session cookie (minted to a token via TOTP), never an official Client ID/Secret or OAuth.
 
 ## Matching tiers (`matcher.ts`)
 
@@ -96,7 +106,7 @@ The Python implementation (`playlist_converter.py`) is the behavioral reference.
 
 ## Security notes
 
-- Never commit `.env`, ARL, or generated reports. `.gitignore` excludes them.
+- Never commit `.env`, `arl`, `sp_dc`, or generated reports. `.gitignore` excludes them.
 - `credentials.json` is written with `0600` on Unix.
 - The unofficial endpoints are personal, non-commercial use; keep that disclaimer in the README.
 
