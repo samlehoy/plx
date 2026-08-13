@@ -1,3 +1,4 @@
+import { createHmac } from 'node:crypto';
 import { z } from 'zod';
 import { browserHeaders, fetchJson, fetchText } from './http.js';
 import type { DeezerCandidate, Track } from './types.js';
@@ -93,16 +94,51 @@ const ADD_TO_PLAYLIST_SHA = '47b2a1234b17748d332dd0431534f22450e9ecbb3d5ddcdacbd
 const SEARCH_TRACKS_SHA = 'bc1ca2fcd0ba1013a0fc88e6cc4f190af501851e3dafd3e1ef85840297694428';
 const LIBRARY_V3_SHA = '973e511ca44261fda7eebac8b653155e7caee3675abb4fb110cc1b8c78b091c3';
 
-const writeHeaders = (token: string) => ({ ...browserHeaders, Authorization: `Bearer ${token}`, 'Content-Type': 'application/json', 'app-platform': 'WebPlayer' });
+const writeHeaders = (token: string) => ({ ...browserHeaders, Authorization: `Bearer ${token}`, 'Content-Type': 'application/json', 'Accept': 'application/json', 'app-platform': 'WebPlayer' });
 
-// Authenticated token from a logged-in browser session (sp_dc cookie) via the embed __NEXT_DATA__ trick.
-export async function authenticatedToken(spDc: string): Promise<string> {
-  const data = await nextData('https://open.spotify.com/embed/track/4uLU6hMCjMI75M1A2tKUQC', `sp_dc=${spDc}`);
-  const session = data.props?.pageProps?.state?.settings?.session;
-  if (session?.isAnonymous !== false) throw new Error('Spotify session masih anonim — sp_dc tidak valid atau kedaluwarsa');
-  if (!session.accessToken) throw new Error('Spotify token missing');
-  return session.accessToken;
+// Authenticated token from a logged-in browser session (sp_dc cookie).
+// The web player obtains its API token at /api/token with a TOTP derived from a
+// rotating "nuance" secret + Spotify server time; the embed __NEXT_DATA__ token
+// only covers playback/reads, not search+write mutations.
+const NUANCE_URL = 'https://gist.githubusercontent.com/raw/22ed9c6ba463899e933427f7de1f0eef/nuances.json';
+
+function base32Decode(input: string): Buffer {
+  const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+  let bits = 0; let value = 0; const out: number[] = [];
+  for (const c of input.replace(/=+$/, '').toUpperCase()) {
+    const idx = alphabet.indexOf(c);
+    if (idx === -1) continue;
+    value = (value << 5) | idx; bits += 5;
+    if (bits >= 8) { out.push((value >>> (bits - 8)) & 0xff); bits -= 8; }
+  }
+  return Buffer.from(out);
 }
+
+function totp(secret: string, timestampSec: number): string {
+  const counter = Math.floor(timestampSec / 30);
+  const msg = Buffer.alloc(8);
+  msg.writeUInt32BE(Math.floor(counter / 0x100000000), 0);
+  msg.writeUInt32BE(counter >>> 0, 4);
+  const mac = createHmac('sha1', base32Decode(secret)).update(msg).digest();
+  const offset = mac[mac.length - 1] & 0xf;
+  const code = ((mac[offset] & 0x7f) << 24) | ((mac[offset + 1] & 0xff) << 16) | ((mac[offset + 2] & 0xff) << 8) | (mac[offset + 3] & 0xff);
+  return String(code % 1_000_000).padStart(6, '0');
+}
+
+async function tokenFromSpDc(spDc: string): Promise<string> {
+  const nuances = await fetchJson<Array<{ s: string; v: number }>>(NUANCE_URL);
+  const nuance = nuances.reduce((best, n) => (best && best.v >= n.v ? best : n), undefined as { s: string; v: number } | undefined);
+  if (!nuance) throw new Error('Spotify nuance secret not found');
+  const serverTime = await fetchJson<{ serverTime: number }>('https://open.spotify.com/api/server-time');
+  const otp = totp(nuance.s, serverTime.serverTime);
+  const url = `https://open.spotify.com/api/token?reason=transport&productType=web-player&totp=${otp}&totpServer=${otp}&totpVer=${nuance.v}`;
+  const token = await fetchJson<{ accessToken?: string; accessTokenExpirationTimestampMs?: number; isAnonymous?: boolean }>(url, { headers: { ...browserHeaders, Cookie: `sp_dc=${spDc}` } });
+  if (!token.accessToken) throw new Error('Spotify token missing');
+  return token.accessToken;
+}
+
+// Authenticated write token from an sp_dc cookie (full web-player scope: search + write).
+export function authenticatedToken(spDc: string): Promise<string> { return tokenFromSpDc(spDc); }
 
 // Spotify search, shaped as DeezerCandidate (duration in seconds) so matchCandidates is reusable.
 export async function searchTrack(term: string, token: string): Promise<DeezerCandidate[]> {

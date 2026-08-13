@@ -22,15 +22,32 @@ Verified live this session:
 - Dedupe on write: existing-track skip + **in-batch duplicate removal** (`[...new Set(ids)]`). Deezer rejects any chunk containing a repeated id (`PlaylistAddTracksError { isNotAllowed }`).
 - Existing-playlist target: `listPlaylists` (GetUserPlaylists) + paste link (`resolveDeezerPlaylistId` follows `link.deezer.com/s/…` shortlinks).
 
-## Planned: auto-fetch credentials (Deezer ARL + Spotify sp_dc)
+## Semi-auto credential fill (macOS: Chromium family + Safari) — DONE (2026-08-13)
 
-Currently the user must manually find the Deezer `arl` / Spotify `sp_dc` cookie in DevTools and paste it. Plan: **auto-retrieve both** so the user just logs in and the tool grabs the cookie itself, while keeping the manual path as a fallback.
+Instead of fully manual copy-paste, the ARL / `sp_dc` inputs now try to **read the
+cookie from a logged-in browser session** first — the user only has to accept the
+OS permission dialog — and fall back to manual paste if nothing is found.
 
-- Goal: detect the cookie from an existing logged-in browser session (or a headless one we drive through login) instead of hand-copying from F12.
-- Manual entry stays available (the current prompt + settings menu) — auto is additive, not a replacement.
-- Open questions to settle before building: which browser(s) to read from (Chrome/Edge cookie DB vs. a bundled headless login), whether OS keychain/DPAPI decryption is needed, and whether Spotify/Deezer set the cookie `HttpOnly` (which would rule out JS-only access).
+- **Chromium family** (Brave, Chrome, Edge, Chromium, Vivaldi, Opera): same decrypt
+  scheme, differing only by profile dir + Keychain service name. Cookie values are
+  AES-128-CBC (`v10` prefix, fixed IV 16×`0x20`) under a key derived from the login
+  Keychain password via PBKDF2-HMAC-SHA1 (`saltysalt`, 1003 iter, 16 bytes). DB
+  version ≥ 24 prepends a 32-byte SHA256 domain-hash to the plaintext that must be
+  stripped. **Verified live against a real Brave DB** (`arl` → hex string, `sp_dc`
+  → base64 string).
+- **Safari**: `Cookies.binarycookies` is plaintext (no encryption) but TCC-gated —
+  reading it needs **Full Disk Access**, not just the Keychain "Allow" dialog.
+  Parser mirrors `browser_cookie3` (`cook` magic + big-endian page table, then
+  little-endian cookie records with null-terminated strings at record-relative
+  offsets).
+- Wired into `ensureDeezer`/`ensureSpotify` + the `arl`/`sp_dc` settings entries via
+  `tryAutoFillCredentials(cfg)` — additive: env vars and stored credentials win,
+  manual paste stays the fallback. First use pops the macOS Keychain "Allow" dialog.
 
-## Deezer → Spotify (implemented, NOT working — needs investigation)
+Out of scope for now: Windows (DPAPI) / Linux (libsecret) cookie decrypt, and the
+Firefox key4.db/encryptedcookies format.
+
+## Deezer → Spotify (WORKING — verified live)
 
 Goal: reverse direction — read a Deezer playlist, write to Spotify. **No Spotify Developer account, no third-party service.**
 
@@ -46,7 +63,8 @@ Same trick as the other two surfaces: use Spotify's **internal web endpoint + br
 ### Spike findings (2026-08-13)
 
 - **Path A — `https://open.spotify.com/get_access_token?reason=transport&productType=web_player` + `Cookie: sp_dc=…` → DEAD.** Returns `403 URL Blocked` (HTML), even with a valid `sp_dc`. Do not use.
-- **Path B — `sp_dc` cookie + `https://open.spotify.com/embed/track/{id}` → `__NEXT_DATA__` → `props.pageProps.state.settings.session.accessToken` → WORKS.** With the `sp_dc` cookie attached, the session is `isAnonymous: false` and the token is authenticated. This is the same `__NEXT_DATA__` extraction the existing `anonymousToken()` already does — just add the `sp_dc` cookie to the request.
+- **Path B — `sp_dc` cookie + `https://open.spotify.com/embed/track/{id}` → `__NEXT_DATA__` → `props.pageProps.state.settings.session.accessToken` → yields a non-anonymous token, but READ-ONLY scope.** The embed token only covers playback/reads; it is rejected for search/write mutations. This was the original auth path and the root cause of the reverse flow failing.
+- **Path C — `sp_dc` cookie + `https://open.spotify.com/api/token?reason=transport&productType=web-player&totp=<otp>&totpServer=<otp>&totpVer=<v>` → WORKS (full search+write scope).** The TOTP is HMAC-SHA1 over a rotating "nuance" secret (`gist/22ed9c6…/nuances.json`, take max `v`) + Spotify server-time (`/api/server-time`), 30s period, 6 digits. This is the path the web player itself uses; found in `spotube-plugin-spotify`'s `RealCoreAPI.kt` + `TOTP.kt`.
 - **Write/search contract found** in `sonic-liberation/spotube-plugin-spotify` (AGPL; `.bruno` collection + Kotlin `spotify_gql_client`). This resolves the whole write surface — no live DevTools capture needed:
   - `createPlaylist` → **REST**, `POST https://spclient.wg.spotify.com/playlist/v2/playlist?format=json`, body `{ ops: [{ kind: "UPDATE_LIST_ATTRIBUTES", updateListAttributes: { newAttributes: { values: { name, description } } } }] }` → `{ uri, revision }`. No persisted-query hash.
   - `addTracksToPlaylist` → Pathfinder **v2**, `POST /pathfinder/v2/query`, `operationName: "addToPlaylist"`, `sha256Hash: 47b2a1234b17748d332dd0431534f22450e9ecbb3d5ddcdacbd83368636a0990`, variables `{ playlistItemUris, playlistUri, newPosition: { moveType: "BOTTOM_OF_PLAYLIST", fromUid: null } }`.
@@ -56,12 +74,13 @@ Same trick as the other two surfaces: use Spotify's **internal web endpoint + br
 
 ### Implemented (2026-08-13)
 
-- `src/spotify.ts`: `authenticatedToken(spDc)` (Path B), `searchTrack(term, token)`, `createPlaylist(name, token)` (REST), `addTracks(playlistUri, trackUris, token)` (Pathfinder v2), `listPlaylists(token)` (libraryV3), `fetchTrackUris(id, token)` (reuses the v1 `fetchPlaylist` read path).
+- `src/spotify.ts`: `authenticatedToken(spDc)` (Path C — `/api/token` + TOTP), `searchTrack(term, token)`, `createPlaylist(name, token)` (REST), `addTracks(playlistUri, trackUris, token)` (Pathfinder v2), `listPlaylists(token)` (libraryV3), `fetchTrackUris(id, token)` (reuses the v1 `fetchPlaylist` read path).
 - `src/deezer.ts`: `getPlaylistTracks(playlistId)` — ordered full metadata for the reverse source.
 - `src/reverse.ts`: `reverseMatch` (shared match loop) + `reverseConvert` (new target) + `reverseWriteToExisting` (existing target, dedupe + append).
 - `src/config.ts`: `spotifyDc` credential (env `SPOTIFY_DC` or stored), prompted/saved like the ARL.
 - `src/cli.ts`: menu options `Deezer → Spotify: playlist baru` and `Deezer → Spotify: playlist yang ada`, `sp_dc` setting entry.
-- `tests/reverse.test.ts`: match+write + dedupe with mocked fetch (16 tests total pass).
+- `tests/reverse.test.ts`: match+write + dedupe with mocked fetch.
+- `tests/spotify.test.ts`: token minting test (pins TOTP to RFC 6238 secret at T=59 → `287082`).
 
 ### Not implemented (deliberate)
 
@@ -77,6 +96,27 @@ Both reverse targets (new playlist and existing playlist) are broken in live use
 
 To debug: run one reverse convert with a valid `sp_dc`, capture the exact request + response for `searchTracks` and `addToPlaylist`, and diff against the web player's own DevTools payload (headers included, not just the body).
 
+### Fixed (2026-08-13): authenticated token minting
+
+The root cause was **auth scope**, not hash rotation. The embed `__NEXT_DATA__` token only covers playback/reads; the web player obtains its full search+write token from `GET https://open.spotify.com/api/token?reason=transport&productType=web-player&totp=<otp>&totpServer=<otp>&totpVer=<v>` with `Cookie: sp_dc=…`. The TOTP is HMAC-SHA1 over a rotating "nuance" secret (`gist/22ed9c6…/nuances.json`, take max `v`) + Spotify server-time (`/api/server-time`), 30s period, 6 digits.
+
+- `src/spotify.ts`: `authenticatedToken(spDc)` now mints the token via `/api/token` (TOTP in `totp()`, base32 decode in `base32Decode()`). The embed-`__NEXT_DATA__` fallback was removed — it only ever yielded a read-scope token that would fail writes confusingly. Added `Accept: application/json` to write headers.
+- `tests/spotify.test.ts`: token minting test pins TOTP to the RFC 6238 secret at T=59 (`287082`).
+- Verified against `sonic-liberation/spotube-plugin-spotify` (`RealCoreAPI.kt`, `TOTP.kt`), the active third-party client. TOTP self-check passes all 6 RFC 6238 vectors.
+
+### Verified live (2026-08-13) — all surfaces pass
+
+With a real `SPOTIFY_DC` in `.env`, every reverse-flow surface round-tripped against the live service:
+
+- **Token mint** — `authenticatedToken` → 403-char `BQ…` token (non-anonymous).
+- **`searchTracks`** — `"NewJeans Ditto"` → 10 results, correct URIs (`spotify:track:…`), duration in ms.
+- **`libraryV3` (listPlaylists)** — 11 writable playlists returned, `canEditItems` filter correct.
+- **`createPlaylist`** — REST `spclient` → new `spotify:playlist:3Hy3…` created.
+- **`addTracks`** — added `Ditto` URI, confirmed present via `fetchTrackUris` (1 track).
+- **Cleanup** — test playlist removed via `removeItemsFromRootlist` (`operationName`, hash `3422f186…`, variables `{ uris }`). No `PersistedQueryNotFound` on any op → the three write/search hashes are current.
+
+The hashes in `spotify.ts` (`ADD_TO_PLAYLIST_SHA`, `SEARCH_TRACKS_SHA`, `LIBRARY_V3_SHA`) are confirmed current as of today. Note: Spotify may rotate them later — if `PersistedQueryNotFound` appears, re-capture from DevTools (see ARCHITECTURE.md).
+
 ### Known risks (fragility, ranked)
 
 1. Spotify read-anonymous (working) — most stable.
@@ -86,7 +126,7 @@ To debug: run one reverse convert with a valid `sp_dc`, capture the exact reques
 ## Release blockers
 
 1. ~~Push to GitHub~~ — done (`4ca1db5`). **Confirm the CI matrix passes** (ubuntu/macos/windows × node 22/24) — pending.
-2. Fix the Deezer → Spotify reverse flow (see "Remaining" above) — currently broken.
+2. ~~Fix the Deezer → Spotify reverse flow~~ — done, verified live (see "Verified live" above).
 3. Publish `plx@0.1.0` to npm.
 
 ## Security & operational notes

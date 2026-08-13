@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { confirm, intro, isCancel, outro, password, select, text } from '@clack/prompts';
-import { loadConfig, saveCredentials, saveRecentUrl, type Config } from './config.js';
+import { loadConfig, saveCredentials, saveRecentUrl, tryAutoFillCredentials, type Config } from './config.js';
 import { DeezerClient, resolveDeezerPlaylistId } from './deezer.js';
 import { Converter } from './converter.js';
 import { anonymousToken, authenticatedToken, parsePlaylistId, playlistName } from './spotify.js';
@@ -14,10 +14,13 @@ function args(): string[] { return process.argv.slice(2); }
 // Returns null when the user cancels or the ARL is rejected.
 async function ensureDeezer(cfg: Config): Promise<DeezerClient | null> {
   if (!cfg.deezerArl) {
-    const arl = await password({ message: 'Deezer ARL (cookie dari deezer.com: F12 → Application → Cookies → arl)' });
-    if (isCancel(arl) || !arl) return null;
-    cfg.deezerArl = String(arl);
-    await saveCredentials({ deezerArl: cfg.deezerArl });
+    const filled = await tryAutoFillCredentials(cfg);
+    if (!filled.includes('deezerArl')) {
+      const arl = await password({ message: 'Deezer ARL (cookie dari deezer.com: F12 → Application → Cookies → arl)' });
+      if (isCancel(arl) || !arl) return null;
+      cfg.deezerArl = String(arl);
+      await saveCredentials({ deezerArl: cfg.deezerArl });
+    }
   }
   const deezer = new DeezerClient(cfg.deezerArl);
   try {
@@ -109,10 +112,13 @@ async function maybeWrite(converter: Converter, name: string, result: Awaited<Re
 // Build a validated Spotify session (sp_dc cookie → authenticated token). Returns token or null.
 async function ensureSpotify(cfg: Config): Promise<string | null> {
   if (!cfg.spotifyDc) {
-    const dc = await password({ message: 'Spotify sp_dc (cookie dari open.spotify.com: F12 → Application → Cookies → sp_dc)' });
-    if (isCancel(dc) || !dc) return null;
-    cfg.spotifyDc = String(dc);
-    await saveCredentials({ spotifyDc: cfg.spotifyDc });
+    const filled = await tryAutoFillCredentials(cfg);
+    if (!filled.includes('spotifyDc')) {
+      const dc = await password({ message: 'Spotify sp_dc (cookie dari open.spotify.com: F12 → Application → Cookies → sp_dc)' });
+      if (isCancel(dc) || !dc) return null;
+      cfg.spotifyDc = String(dc);
+      await saveCredentials({ spotifyDc: cfg.spotifyDc });
+    }
   }
   try {
     return await authenticatedToken(cfg.spotifyDc);
@@ -162,6 +168,7 @@ async function runInteractive(options: CliOptions): Promise<void> {
         { value: 'reverse-existing', label: 'Deezer → Spotify: playlist yang ada' },
         { value: 'arl', label: `Deezer ARL: ${cfg.deezerArl ? '✓ tersimpan' : '(belum diisi)'}` },
         { value: 'spdc', label: `Spotify sp_dc: ${cfg.spotifyDc ? '✓ tersimpan' : '(belum diisi)'}` },
+        { value: 'autofetch', label: 'Ambil kredensial otomatis (dari browser)' },
         { value: 'output', label: `Laporan: ${options.output}` },
         { value: 'quit', label: 'Keluar' },
       ],
@@ -170,17 +177,32 @@ async function runInteractive(options: CliOptions): Promise<void> {
     if (choice === 'reverse') { await reverseConvertFlow(cfg, options, false); continue; }
     if (choice === 'reverse-existing') { await reverseConvertFlow(cfg, options, true); continue; }
     if (choice === 'arl') {
-      const arl = await password({ message: 'Deezer ARL' });
-      if (isCancel(arl) || !arl) continue;
-      cfg.deezerArl = String(arl);
-      await saveCredentials({ deezerArl: cfg.deezerArl });
+      const filled = await tryAutoFillCredentials(cfg);
+      if (!filled.includes('deezerArl')) {
+        const arl = await password({ message: 'Deezer ARL' });
+        if (isCancel(arl) || !arl) continue;
+        cfg.deezerArl = String(arl);
+        await saveCredentials({ deezerArl: cfg.deezerArl });
+      }
+      console.log('✓ Deezer ARL tersimpan.');
       continue;
     }
     if (choice === 'spdc') {
-      const dc = await password({ message: 'Spotify sp_dc' });
-      if (isCancel(dc) || !dc) continue;
-      cfg.spotifyDc = String(dc);
-      await saveCredentials({ spotifyDc: cfg.spotifyDc });
+      const filled = await tryAutoFillCredentials(cfg);
+      if (!filled.includes('spotifyDc')) {
+        const dc = await password({ message: 'Spotify sp_dc' });
+        if (isCancel(dc) || !dc) continue;
+        cfg.spotifyDc = String(dc);
+        await saveCredentials({ spotifyDc: cfg.spotifyDc });
+      }
+      console.log('✓ Spotify sp_dc tersimpan.');
+      continue;
+    }
+    if (choice === 'autofetch') {
+      const filled = await tryAutoFillCredentials(cfg, true);
+      console.log(filled.length
+        ? `✓ Terambil dari browser: ${filled.join(', ')}.`
+        : '✗ Tidak ada kredensial yang bisa diambil (browser belum login / keychain ditolak).');
       continue;
     }
     if (choice === 'output') {

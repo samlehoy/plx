@@ -2,6 +2,7 @@ import { chmod, mkdir, readFile, writeFile } from 'node:fs/promises';
 import { homedir, platform } from 'node:os';
 import { join } from 'node:path';
 import 'dotenv/config';
+import { fetchBrowserCredentials } from './browser.js';
 
 export type Config = { deezerArl: string; spotifyDc: string; recentUrls: string[] };
 
@@ -35,3 +36,20 @@ export async function saveCredentials(values: Partial<Config>): Promise<void> {
 }
 
 async function loadStored(): Promise<Partial<Config>> { try { return JSON.parse(await readFile(file(), 'utf8')) as Partial<Config>; } catch { return {}; } }
+
+// Semi-auto: fill credentials from a logged-in browser (pops the macOS Keychain
+// "Allow" dialog on first use), persist what's found, and return the field names
+// filled. By default only fills *missing* fields (env vars and stored credentials
+// win); pass overwrite=true to refetch and replace whatever the browser has. Never
+// throws — a denied keychain / TCC block just fills nothing, and the caller falls
+// back to the manual paste prompt.
+export async function tryAutoFillCredentials(cfg: Config, overwrite = false): Promise<string[]> {
+  const filled: string[] = [];
+  const want = overwrite || !cfg.deezerArl || !cfg.spotifyDc;
+  if (!want) return filled;
+  const found = fetchBrowserCredentials();
+  if ((overwrite || !cfg.deezerArl) && found.arl) { cfg.deezerArl = found.arl; filled.push('deezerArl'); }
+  if ((overwrite || !cfg.spotifyDc) && found.spDc) { cfg.spotifyDc = found.spDc; filled.push('spotifyDc'); }
+  if (filled.length) await saveCredentials({ deezerArl: cfg.deezerArl, spotifyDc: cfg.spotifyDc });
+  return filled;
+}
