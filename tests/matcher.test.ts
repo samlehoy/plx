@@ -20,4 +20,10 @@ describe('matcher', () => {
     expect(result?.id).toBe('1002');
     expect(result?.method).toBe('fuzzy-duration');
   });
+  it('ignores whitespace in artist names', () => {
+    const result = matchCandidates('당돌한 여자', 'JIHYO', 185000, [
+      { id: '673998072', title: '당돌한 여자', artist: 'Ji Hyo', duration: 185 },
+    ]);
+    expect(result?.id).toBe('673998072');
+  });
 });

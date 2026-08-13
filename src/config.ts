@@ -3,7 +3,7 @@ import { homedir, platform } from 'node:os';
 import { join } from 'node:path';
 import 'dotenv/config';
 
-export type Config = { spotifyClientId?: string; spotifySecret?: string; deezerArl: string; outputCsv: string };
+export type Config = { deezerArl: string; spotifyDc: string; recentUrls: string[] };
 
 export function configDir(): string {
   if (platform() === 'win32') return join(process.env.APPDATA ?? join(homedir(), 'AppData', 'Roaming'), 'plx');
@@ -12,18 +12,19 @@ export function configDir(): string {
 
 const file = () => join(configDir(), 'credentials.json');
 
-export async function loadConfig(requireSpotify = true): Promise<Config> {
+export async function loadConfig(requireDeezer = true): Promise<Config> {
   let stored: Partial<Config> = {};
   try { stored = JSON.parse(await readFile(file(), 'utf8')) as Partial<Config>; } catch { /* first run */ }
-  const cfg = {
-    spotifyClientId: process.env.SPOTIFY_CLIENT_ID ?? stored.spotifyClientId,
-    spotifySecret: process.env.SPOTIFY_CLIENT_SECRET ?? stored.spotifySecret,
-    deezerArl: process.env.DEEZER_ARL ?? stored.deezerArl ?? '',
-    outputCsv: 'conversion_report.csv',
-  };
-  const missing = [!cfg.deezerArl && 'DEEZER_ARL', requireSpotify && !cfg.spotifyClientId && 'SPOTIFY_CLIENT_ID', requireSpotify && !cfg.spotifySecret && 'SPOTIFY_CLIENT_SECRET'].filter(Boolean);
-  if (missing.length) throw new Error(`Konfigurasi kurang: ${missing.join(', ')}`);
+  const cfg = { deezerArl: process.env.DEEZER_ARL ?? stored.deezerArl ?? '', spotifyDc: process.env.SPOTIFY_DC ?? stored.spotifyDc ?? '', recentUrls: stored.recentUrls ?? [] };
+  if (requireDeezer && !cfg.deezerArl) throw new Error('Konfigurasi kurang: DEEZER_ARL');
   return cfg;
+}
+
+export async function saveRecentUrl(url: string): Promise<void> {
+  const stored = await loadStored();
+  const list = Array.isArray(stored.recentUrls) ? stored.recentUrls : [];
+  const next = [url, ...list.filter((u) => u !== url)].slice(0, 10);
+  await saveCredentials({ recentUrls: next });
 }
 
 export async function saveCredentials(values: Partial<Config>): Promise<void> {

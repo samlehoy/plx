@@ -12,3 +12,4 @@ coverage/
 .spotify_token.json
 .deezer_config.json
 .converter_settings.json
+sp_dc*.txt
