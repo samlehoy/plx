@@ -1,6 +1,6 @@
 {
   "name": "plx-converter",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Spotify ⇄ Deezer playlist converter CLI",
   "license": "MIT",
   "type": "module",

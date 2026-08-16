@@ -5,16 +5,16 @@ export type CliOptions = {
   help: boolean;
 };
 
-export const HELP_TEXT = `plx — Spotify → Deezer playlist converter
+export const HELP_TEXT = `plx — Spotify ⇄ Deezer playlist converter
 
 Usage:
-  plx                              interactive menu
-  plx --url <URL|ID> [--url ...]   convert specific playlist(s) — no Spotify account or OAuth needed
+  plx                              interactive menu (both directions)
+  plx --url <URL|ID> [--url ...]   convert Spotify playlist(s) to Deezer
 
 Options:
   -u, --url <URL|ID>      Spotify playlist URL, URI, or ID (repeatable)
   -o, --output <file>     CSV report path (default: conversion_report.csv)
-  -d, --dry-run           match only; do not create Deezer playlists
+  -d, --dry-run           match only; do not create playlists
   -h, --help              show this help
 
 Examples:
