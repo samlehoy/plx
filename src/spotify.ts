@@ -86,6 +86,19 @@ export function parsePlaylistId(ref: string): string {
   return input;
 }
 
+// Resolve a spotify:track:ID URI to its real title/artist/duration via the anonymous
+// embed endpoint — used to verify reverse-flow matches (precision check).
+export async function resolveTrackMeta(uri: string): Promise<Track> {
+  const id = uri.split(':').pop() ?? uri;
+  const entity = (await nextData(`https://open.spotify.com/embed/track/${id}`)).props?.pageProps?.state?.data?.entity;
+  const artists = Array.isArray(entity?.artists) ? (entity.artists as Array<{ name?: string }>) : [];
+  return {
+    name: typeof entity?.name === 'string' ? entity.name : '',
+    artist: artists[0]?.name ?? '',
+    durationMs: typeof entity?.duration === 'number' ? entity.duration : null,
+  };
+}
+
 // --- Authenticated write (reverse flow: Deezer → Spotify) ---
 const PATHFINDER_V2_URL = 'https://api-partner.spotify.com/pathfinder/v2/query';
 const SPCLIENT_URL = 'https://spclient.wg.spotify.com';
@@ -93,6 +106,7 @@ const SPCLIENT_URL = 'https://spclient.wg.spotify.com';
 const ADD_TO_PLAYLIST_SHA = '47b2a1234b17748d332dd0431534f22450e9ecbb3d5ddcdacbd83368636a0990';
 const SEARCH_TRACKS_SHA = 'bc1ca2fcd0ba1013a0fc88e6cc4f190af501851e3dafd3e1ef85840297694428';
 const LIBRARY_V3_SHA = '973e511ca44261fda7eebac8b653155e7caee3675abb4fb110cc1b8c78b091c3';
+const ADD_ITEMS_TO_ROOTLIST_SHA = 'bd9c5cae1ee80ebca05d7ed12fd394216f49a20ce72d9dc762868df0f14522ea';
 
 const writeHeaders = (token: string) => ({ ...browserHeaders, Authorization: `Bearer ${token}`, 'Content-Type': 'application/json', 'Accept': 'application/json', 'app-platform': 'WebPlayer' });
 
@@ -157,7 +171,16 @@ export async function createPlaylist(name: string, token: string): Promise<strin
   const body = { ops: [{ kind: 'UPDATE_LIST_ATTRIBUTES', updateListAttributes: { newAttributes: { values: { name, description: '' } } } }] };
   const raw = await fetchJson<{ uri?: string }>(`${SPCLIENT_URL}/playlist/v2/playlist?format=json`, { method: 'POST', headers: writeHeaders(token), body: JSON.stringify(body) });
   if (!raw.uri) throw new Error('Spotify create playlist: no uri');
+  await addItemsToRootlist(raw.uri, token);
   return raw.uri;
+}
+
+// The REST create above makes a playlist but does NOT attach it to the account's
+// library/rootlist — without this follow it never shows in the sidebar.
+async function addItemsToRootlist(uri: string, token: string): Promise<void> {
+  const body = { variables: { uris: [uri] }, operationName: 'addItemsToRootlist', extensions: { persistedQuery: { version: 1, sha256Hash: ADD_ITEMS_TO_ROOTLIST_SHA } } };
+  const raw = await fetchJson<{ errors?: Array<{ message: string }> }>(PATHFINDER_V2_URL, { method: 'POST', headers: writeHeaders(token), body: JSON.stringify(body) });
+  if (raw.errors?.length) throw new Error(`addItemsToRootlist: ${raw.errors[0].message}`);
 }
 
 export async function addTracks(playlistUri: string, trackUris: string[], token: string): Promise<void> {

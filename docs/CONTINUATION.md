@@ -2,7 +2,17 @@
 
 **Handoff log for the next session.** This file tracks what changed and what's left. For *how the system works* read `ARCHITECTURE.md`; for *setup/credentials* read `CONFIG.md`.
 
-Updated: 2026-08-13
+Updated: 2026-08-16
+
+## 2026-08-16
+
+- **Reverse flow playlist not showing in library — fixed.** `createPlaylist` (REST `spclient`) makes a playlist but does **not** attach it to the account; the web player follows creation with `addItemsToRootlist`. Added `addItemsToRootlist` (Pathfinder v2, hash `bd9c5cae…`, variables `{ uris: [playlistUri] }`) right after `createPlaylist` in `spotify.ts`. Source: `spotube-plugin-spotify` `PlaylistClient.kt` `followPlaylist`.
+- **Reverse-flow precision verify.** `reverseMatch` now resolves each matched Spotify URI back to its real metadata (`resolveTrackMeta` → anonymous embed `__NEXT_DATA__`) and re-checks against the Deezer source. Divergent matches are flagged `⚠️ cek ulang (mungkin salah track)` in the CSV `note` and counted separately in the summary line. Uses only primary artist + duration (embed), so it catches obvious false-positives, not full multi-artist precision.
+- **New playlist prefix** `[conv]` → `[plx]` (forward + reverse).
+- **Target-kind in-flow.** Main menu collapsed to two directions (`Spotify → Deezer`, `Deezer → Spotify`); the "new playlist vs existing playlist" choice moved inside each flow (`chooseTargetKind`), applied to the *target* side only.
+- **Forward source from account.** `chooseSource` now offers "Pilih dari akun Spotify saya" (when `sp_dc` is set), reading the source playlist with the authenticated token so private playlists read correctly.
+- **Credential prompts.** Input hint lines (`login … → F12 → Application → Cookies → arl/sp_dc`) + a `warnLogin` reminder before `arl`/`spdc`/`autofetch` menu entries.
+- **Existing-target dedupe message.** `writeToExisting` now separates "N sudah ada" (already in target) from "N duplikat dihilangkan" (batch/collision dupes) instead of lumping both into "sudah ada".
 
 ## Pointers
 

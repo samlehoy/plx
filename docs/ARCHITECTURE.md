@@ -49,9 +49,9 @@ They meet only in `Converter` (`src/converter.ts`) and `reverse.ts`, which is wh
 | `src/args.ts` | Pure typed CLI parsing → `CliOptions`. No I/O. |
 | `src/config.ts` | Config dir + `credentials.json` read/write (`deezerArl`, `spotifyDc`), `tryAutoFillCredentials`. |
 | `src/browser.ts` | Reads `arl`/`sp_dc` from a logged-in browser (Chromium family decrypt + Safari binarycookies parse). macOS only. |
-| `src/spotify.ts` | Anonymous token, Pathfinder fetch, embed fallback, and `authenticatedToken(spDc)` (TOTP) + search/write/list for the reverse flow. |
+| `src/spotify.ts` | Anonymous token, Pathfinder fetch, embed fallback, `resolveTrackMeta` (reverse verify), and `authenticatedToken(spDc)` (TOTP) + search/write/list for the reverse flow. |
 | `src/deezer.ts` | ARL→JWT auth, GraphQL mutations, public search. |
-| `src/reverse.ts` | Deezer → Spotify orchestration: `reverseMatch`, `reverseConvert`, `reverseWriteToExisting`. |
+| `src/reverse.ts` | Deezer → Spotify orchestration: `reverseMatch` (match + verify precision), `reverseConvert`, `reverseWriteToExisting`. |
 | `src/converter.ts` | Orchestrates read → match → report; retry; CSV rows. |
 | `src/matcher.ts` | Pure normalization + tiered matching. No I/O. |
 | `src/csv.ts` | CSV escaping/writing. |
@@ -70,8 +70,10 @@ The project intentionally uses **unofficial web endpoints**. They can change wit
 | Authenticated token | `GET https://open.spotify.com/api/token?reason=transport&productType=web-player&totp=<otp>&totpServer=<otp>&totpVer=<v>` with `Cookie: sp_dc=…` (TOTP = HMAC-SHA1 over the rotating "nuance" secret + `/api/server-time`) | Full search+write scope; the embed token is read-only and must NOT be used for writes | — |
 | Playlist tracks (full) | `https://api-partner.spotify.com/pathfinder/v1/query` — persisted query `fetchPlaylist` | **The `sha256Hash` rotates periodically.** If you see `PersistedQueryNotFound`, grab a fresh hash from the web player's DevTools Network tab. | `FETCH_PLAYLIST_SHA` |
 | Playlist tracks (fallback) | `https://open.spotify.com/embed/playlist/{id}` → `trackList` | Capped at **100** tracks (`EMBED_TRACK_LIMIT`). Used only when Pathfinder fails. | `EMBED_TRACK_LIMIT` |
+| Track metadata (reverse verify) | `https://open.spotify.com/embed/track/{id}` → `__NEXT_DATA__` → `entity.name` / `artists[0].name` / `duration` (ms) | Anonymous; used by `resolveTrackMeta` to verify reverse-flow matches (precision). Primary artist + duration only — not full multi-artist metadata. | — |
 | Search tracks | Pathfinder **v2** `POST /pathfinder/v2/query`, `operationName: "searchTracks"` | Hash rotates (see above) | `SEARCH_TRACKS_SHA` |
-| Create playlist | REST `POST https://spclient.wg.spotify.com/playlist/v2/playlist?format=json` | No persisted-query hash | — |
+| Create playlist | REST `POST https://spclient.wg.spotify.com/playlist/v2/playlist?format=json` | No persisted-query hash. Creates the playlist but does **not** attach it to the account — must be followed by `addItemsToRootlist`, else it never shows in the library. | — |
+| Add to library/rootlist | Pathfinder **v2**, `operationName: "addItemsToRootlist"`, `{ uris: [playlistUri] }` | Hash rotates | `ADD_ITEMS_TO_ROOTLIST_SHA` |
 | Add tracks | Pathfinder **v2**, `operationName: "addToPlaylist"` | Hash rotates | `ADD_TO_PLAYLIST_SHA` |
 | List playlists | Pathfinder **v2**, `operationName: "libraryV3"` | Hash rotates | `LIBRARY_V3_SHA` |
 

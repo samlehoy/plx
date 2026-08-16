@@ -31,7 +31,7 @@ export class Converter {
     console.log(`[${playlist.name}] ${matchedIds.length}/${result.tracks.length} lagu cocok.`);
     return { matchedIds, total: result.tracks.length, truncated: result.truncated };
   }
-  async writePlaylist(name: string, ids: string[], title = `[conv] ${name}`): Promise<void> {
+  async writePlaylist(name: string, ids: string[], title = `[plx] ${name}`): Promise<void> {
     if (!ids.length) { console.log(`[${name}] Tidak ada lagu yang cocok — playlist tidak dibuat.`); return; }
     const id = await this.deezer.createPlaylist(title);
     const unique = [...new Set(ids)];
@@ -43,12 +43,18 @@ export class Converter {
     if (!ids.length) { console.log(`[${name}] Tidak ada lagu yang cocok.`); return; }
     const existing = await this.deezer.getPlaylistTrackIds(playlistId);
     // Dedupe within the batch too — Deezer rejects any chunk containing a repeated id.
-    const toAdd = [...new Set(ids)].filter((id) => !existing.has(id));
+    const unique = [...new Set(ids)];
+    const batchDupes = ids.length - unique.length;
+    const alreadyThere = unique.filter((id) => existing.has(id)).length;
+    const toAdd = unique.filter((id) => !existing.has(id));
     let added = 0;
     if (toAdd.length) {
       for (let start = 0; start < toAdd.length; start += 100) { added += await this.deezer.addTracks(playlistId, toAdd.slice(start, start + 100)); await new Promise((resolve) => setTimeout(resolve, 200)); }
     }
-    console.log(`[${name}] ${added} lagu baru ditambahkan (${ids.length - added} sudah ada, dilewati).`);
+    const parts: string[] = [];
+    if (alreadyThere) parts.push(`${alreadyThere} sudah ada`);
+    if (batchDupes) parts.push(`${batchDupes} duplikat dihilangkan`);
+    console.log(`[${name}] ${added} lagu baru ditambahkan${parts.length ? ` (${parts.join(', ')})` : ''}.`);
     await this.reorderToMatch(name, playlistId, ids);
   }
   // Reorder the target to mirror the source order (1:1 sync). Moves each matched track into place

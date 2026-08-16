@@ -1,18 +1,22 @@
 import type { DeezerClient } from './deezer.js';
-import { addTracks, createPlaylist, fetchTrackUris, searchTrack } from './spotify.js';
+import { addTracks, createPlaylist, fetchTrackUris, resolveTrackMeta, searchTrack } from './spotify.js';
 import { matchCandidates, searchQuery } from './matcher.js';
 import { writeCsv } from './csv.js';
 import type { ReportRow } from './types.js';
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-type ReverseMatch = { rows: ReportRow[]; matchedUris: string[] };
+type ReverseMatch = { rows: ReportRow[]; matchedUris: string[]; total: number };
 
-// Match a Deezer playlist's tracks to Spotify track URIs. Report reuses `deezer_id` to carry the matched URI.
+// Match a Deezer playlist's tracks to Spotify track URIs, then resolve each matched
+// URI back to its real Spotify metadata and compare to the source. `verified` counts
+// matches whose resolved title+artist still match the source (precision); a matched
+// URI whose metadata diverges is flagged `note: '⚠️ cek ulang (mungkin salah track)'`.
 export async function reverseMatch(deezer: DeezerClient, token: string, sourceId: string, sourceName: string): Promise<ReverseMatch> {
   const tracks = await deezer.getPlaylistTracks(sourceId);
   const rows: ReportRow[] = [];
   const matchedUris: string[] = [];
+  let verified = 0;
   for (let i = 0; i < tracks.length; i += 1) {
     const track = tracks[i];
     let match: { id: string; method: string } | null = null;
@@ -27,24 +31,33 @@ export async function reverseMatch(deezer: DeezerClient, token: string, sourceId
       }
     }
     if (match) {
+      let note: string | null = null;
+      try {
+        const meta = await resolveTrackMeta(match.id);
+        if (matchCandidates(track.name, track.artist, track.durationMs, [{ id: match.id, title: meta.name, artist: meta.artist, duration: meta.durationMs != null ? Math.round(meta.durationMs / 1000) : null }])) verified += 1;
+        else note = '⚠️ cek ulang (mungkin salah track)';
+      } catch {
+        note = '⚠️ verifikasi gagal';
+      }
       matchedUris.push(match.id);
-      rows.push({ playlist: sourceName, title: track.name, artist: track.artist, isrc: null, matched: true, deezer_id: match.id, method: match.method, note: null });
-      console.log(`  [${i + 1}/${tracks.length}] ✓ ${match.method} — ${track.name} — ${track.artist}`);
+      rows.push({ playlist: sourceName, title: track.name, artist: track.artist, isrc: null, matched: true, deezer_id: match.id, method: match.method, note });
+      console.log(`  [${i + 1}/${tracks.length}] ✓ ${match.method} — ${track.name} — ${track.artist}${note ? ` — ${note}` : ''}`);
     } else {
       rows.push({ playlist: sourceName, title: track.name, artist: track.artist, isrc: null, matched: false, note: 'tidak ketemu' });
       console.log(`  [${i + 1}/${tracks.length}] ✗ tidak ditemukan — ${track.name} — ${track.artist}`);
     }
     await sleep(300);
   }
-  console.log(`[${sourceName}] ${matchedUris.length}/${tracks.length} lagu cocok.`);
-  return { rows, matchedUris };
+  const missed = tracks.length - matchedUris.length;
+  console.log(`[${sourceName}] ${matchedUris.length}/${tracks.length} cocok (${verified} terverifikasi${missed ? `, ${missed} gagal match` : ''}).`);
+  return { rows, matchedUris, total: tracks.length };
 }
 
 // Deezer playlist (source) → new Spotify playlist (target).
 export async function reverseConvert(deezer: DeezerClient, token: string, sourceId: string, sourceName: string, output: string): Promise<void> {
   const { rows, matchedUris } = await reverseMatch(deezer, token, sourceId, sourceName);
   if (matchedUris.length) {
-    const uri = await createPlaylist(`[conv] ${sourceName}`, token);
+    const uri = await createPlaylist(`[plx] ${sourceName}`, token);
     for (let start = 0; start < matchedUris.length; start += 100) { await addTracks(uri, matchedUris.slice(start, start + 100), token); await sleep(200); }
     console.log(`[${sourceName}] playlist Spotify dibuat: ${uri} (${matchedUris.length} lagu)`);
   }
