@@ -2,7 +2,7 @@
 import { confirm, intro, isCancel, outro, password, select, text } from '@clack/prompts';
 import { credential, loadConfig, saveCredential, saveRecentUrl, tryAutoFillCredentials, type Config } from './config.js';
 import { Conversion } from './conversion.js';
-import { PROVIDERS, inferSource, providerFor, providerKeys, type ProviderSpec } from './registry.js';
+import { PROVIDERS, convertibleProviders, inferSource, providerFor, targetKeys, type ProviderSpec } from './registry.js';
 import { HELP_TEXT, parseArgs, type CliOptions } from './args.js';
 import type { Provider } from './types.js';
 
@@ -23,7 +23,7 @@ async function ensureCredential(cfg: Config, spec: ProviderSpec): Promise<string
 }
 
 // Settings entry for one provider's credential: unlike ensureCredential this always asks, so a
-// saved-but-expired credential can be replaced.
+// saved-but-expired credential can be replaced. Proves it against the live service before saying so.
 async function reenterCredential(cfg: Config, spec: ProviderSpec): Promise<void> {
   warnLogin(spec.loginSite);
   const filled = await tryAutoFillCredentials(cfg);
@@ -32,7 +32,20 @@ async function reenterCredential(cfg: Config, spec: ProviderSpec): Promise<void>
     if (isCancel(entered) || !entered) return;
     await saveCredential(cfg, spec.key, String(entered));
   }
-  console.log(`✓ ${spec.credentialLabel} saved.`);
+  await report(cfg, spec);
+}
+
+// Check one provider's stored credential against the live service and say what happened.
+async function report(cfg: Config, spec: ProviderSpec): Promise<boolean> {
+  const cred = credential(cfg, spec.key);
+  if (!cred) { console.log(`✗ No ${spec.credentialLabel} saved.`); return false; }
+  try {
+    console.log(`✓ ${spec.label}: ${await spec.validate(cred)}.`);
+    return true;
+  } catch (error) {
+    console.log(`✗ ${spec.label}: ${error instanceof Error ? error.message : 'could not be verified'}`);
+    return false;
+  }
 }
 
 // Build a provider, asking for its credential only if it needs one. `needsWrite` marks the target
@@ -58,8 +71,8 @@ function warnLogin(sites: string): void {
 }
 
 // Pick a provider by role. Adding a provider adds an option here, never a menu entry.
-async function pickProvider(message: string, exclude?: ProviderSpec): Promise<ProviderSpec | null> {
-  const choices = PROVIDERS.filter((p) => p !== exclude);
+async function pickProvider(message: string, from: ProviderSpec[], exclude?: ProviderSpec): Promise<ProviderSpec | null> {
+  const choices = from.filter((p) => p !== exclude);
   const pick = await select({ message, options: choices.map((p) => ({ value: p.key, label: p.label })) });
   if (isCancel(pick)) return null;
   return providerFor(String(pick)) ?? null;
@@ -130,9 +143,9 @@ async function pickTargetPlaylist(spec: ProviderSpec, provider: Provider): Promi
 
 // One flow for every direction: pick source provider, pick target provider, then convert.
 async function runConversion(cfg: Config, options: CliOptions): Promise<void> {
-  const sourceSpec = await pickProvider('Source provider');
+  const sourceSpec = await pickProvider('Source provider', convertibleProviders());
   if (!sourceSpec) return;
-  const targetSpec = await pickProvider('Target provider', sourceSpec);
+  const targetSpec = await pickProvider('Target provider', convertibleProviders(), sourceSpec);
   if (!targetSpec) return;
 
   const source = await build(cfg, sourceSpec, false);
@@ -196,16 +209,16 @@ async function runInteractive(options: CliOptions): Promise<void> {
     if (isCancel(choice) || choice === 'quit') break;
     if (choice === 'convert') { await runConversion(cfg, options); continue; }
     if (choice === 'credentials') {
-      const spec = await pickProvider('Which provider?');
+      const spec = await pickProvider('Which provider?', PROVIDERS);
       if (spec) await reenterCredential(cfg, spec);
       continue;
     }
     if (choice === 'autofetch') {
       warnLogin(PROVIDERS.map((p) => p.label).join(' & '));
       const filled = await tryAutoFillCredentials(cfg, true);
-      console.log(filled.length
-        ? `✓ Fetched from browser: ${filled.join(', ')}.`
-        : '✗ No credentials could be fetched (browser not logged in / keychain denied).');
+      if (!filled.length) { console.log('✗ No credentials could be fetched (browser not logged in / keychain denied).'); continue; }
+      console.log(`Fetched from browser: ${filled.join(', ')}. Checking…`);
+      for (const key of filled) { const spec = providerFor(key); if (spec) await report(cfg, spec); }
       continue;
     }
     if (choice === 'output') {
@@ -233,15 +246,17 @@ async function main() {
   const targetSpec = options.target ? providerFor(options.target) : undefined;
   if (!targetSpec) {
     throw new Error(options.target
-      ? `Unknown target provider '${options.target}'. Valid targets: ${providerKeys().join(', ')}.`
-      : `No target provider. Name one with --to <${providerKeys().join('|')}>.`);
+      ? `Unknown target provider '${options.target}'. Valid targets: ${targetKeys().join(', ')}.`
+      : `No target provider. Name one with --to <${targetKeys().join('|')}>.`);
   }
+  if (!targetSpec.convertible) throw new Error(`Writing into ${targetSpec.label} is not built yet. Valid targets: ${targetKeys().join(', ')}.`);
 
   const cfg = await loadConfig();
   if (cfg.legacyCredentials) console.log('⚠️ Saved credentials are in an older format and were not carried over. Run `plx` and re-enter them (one browser dialog).');
 
   for (const raw of options.urls) {
     const sourceSpec = inferSource(raw);
+    if (sourceSpec && !sourceSpec.convertible) throw new Error(`Reading from ${sourceSpec.label} is not built yet.`);
     if (!sourceSpec) throw new Error(`Cannot tell which provider '${raw}' belongs to. Use a link from one of: ${PROVIDERS.map((p) => p.label).join(', ')}.`);
     if (sourceSpec === targetSpec) throw new Error(`Source and target are both ${sourceSpec.label}.`);
 

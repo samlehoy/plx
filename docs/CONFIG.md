@@ -25,6 +25,15 @@ Spotify → Deezer reads Spotify anonymously — no Premium, no OAuth.
 |---|---|---|---|
 | Deezer `arl` | `DEEZER_ARL` | authenticate Deezer playlist writes | any flow that writes to Deezer (Spotify → Deezer) |
 | Spotify `sp_dc` | `SPOTIFY_DC` | mint an authenticated Spotify token (full search+write scope) | a conversion into a Spotify target |
+| YouTube Music cookie header | `YTMUSIC_COOKIE` | sign requests the way the YouTube Music web client does | any conversion involving YouTube Music |
+
+**YouTube Music needs a whole cookie header, not one cookie.** Google splits a session across a
+dozen-odd cookies, so the manual path is one paste rather than a prompt each: in
+[music.youtube.com](https://music.youtube.com), open DevTools → **Network** → click any request →
+**Request Headers** → copy the entire `cookie:` value. Auto-fetch does this for you on macOS.
+
+Google sessions expire noticeably faster than the other two, so expect to redo this occasionally.
+plx says so explicitly when it happens rather than reporting a generic failure.
 
 Reading a Spotify playlist for a dry run needs **no credentials**.
 
@@ -55,6 +64,7 @@ conversion that needs a credential is asked for one, so **neither is required in
 |---|---|---|
 | `DEEZER_ARL` | writing to a Deezer target | Deezer session cookie (see above). |
 | `SPOTIFY_DC` | writing to a Spotify target, or reading your private Spotify playlists | Spotify web session cookie. |
+| `YTMUSIC_COOKIE` | any conversion involving YouTube Music | A whole `Cookie:` header, not a single cookie — Google needs a bundle. |
 
 ## Config directory
 

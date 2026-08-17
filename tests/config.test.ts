@@ -115,9 +115,15 @@ describe('browser auto-fill', () => {
   });
 
   it('does not touch the browser when every provider already has one', async () => {
-    await storedFile({ credentials: { deezer: 'a', spotify: 'b' } });
+    await storedFile({ credentials: { deezer: 'a', spotify: 'b', ytmusic: 'c' } });
     await tryAutoFillCredentials(await loadConfig());
     expect(fetchBrowserCredentials).not.toHaveBeenCalled(); // no keychain dialog for nothing
+  });
+
+  it('still asks the browser when one provider is missing a credential', async () => {
+    await storedFile({ credentials: { deezer: 'a', spotify: 'b' } }); // no ytmusic
+    await tryAutoFillCredentials(await loadConfig());
+    expect(fetchBrowserCredentials).toHaveBeenCalled();
   });
 
   it('reports nothing filled when the browser yields nothing', async () => {

@@ -4,6 +4,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { homedir, platform } from 'node:os';
 import { join } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
+import { YTMUSIC_COOKIES, cookieHeader } from './ytmusic.js';
 
 // Read the Deezer `arl` / Spotify `sp_dc` cookies from an already-logged-in
 // browser session so the user only has to accept the OS keychain permission.
@@ -13,7 +14,9 @@ import { DatabaseSync } from 'node:sqlite';
 //   - Safari — `Cookies.binarycookies`, plaintext (no encryption) but TCC-gated
 //     (requires Full Disk Access, not just a keychain "Allow").
 
-export type BrowserCredentials = { arl?: string; spDc?: string };
+// Cookie name → value, for every cookie plx cares about that a browser happened to have. Kept in
+// cookie terms; the mapping to one credential per provider happens in fetchBrowserCredentials.
+export type BrowserCredentials = Record<string, string>;
 
 // One decrypt scheme for the whole Chromium family; only the profile dir and
 // Keychain service name differ. Verified against a live Brave DB (key hex
@@ -60,7 +63,39 @@ function keychainPassword(service: string): string | null {
   }
 }
 
-const COOKIE_QUERY = `SELECT name, host_key, encrypted_value FROM cookies WHERE (name = 'arl' AND host_key = '.deezer.com') OR (name = 'sp_dc' AND host_key = '.spotify.com')`;
+// Which cookie names matter, and which hosts they may come from **in priority order**.
+//
+// This ordering is not cosmetic. Google sets `SID`, `SAPISID` and friends on `.google.com` *and*
+// `.youtube.com` with **different values**, so taking whichever the cookie store happened to return
+// first yields a bundle mixing two sessions — which the service reads as logged out. `.youtube.com`
+// wins because that is the host the requests actually go to; `.google.com` is only a fallback for a
+// cookie YouTube did not set itself.
+const WANTED: Array<{ name: string; hosts: string[] }> = [
+  { name: 'arl', hosts: ['deezer.com'] },
+  { name: 'sp_dc', hosts: ['spotify.com'] },
+  ...YTMUSIC_COOKIES.map((name) => ({ name, hosts: ['youtube.com', 'google.com'] })),
+];
+
+const COOKIE_NAMES = WANTED.map((w) => w.name);
+
+// How preferred this host is for this cookie name: 0 is best, -1 means "not a host we want it from".
+export function hostRank(name: string, host: string): number {
+  const want = WANTED.find((w) => w.name === name);
+  if (!want) return -1;
+  return want.hosts.findIndex((h) => host === h || host.endsWith(`.${h}`));
+}
+
+// Keep the best-ranked host for each cookie name, whatever order the store yielded rows in.
+function collect(rows: Array<{ name: string; host: string; value: string }>): BrowserCredentials {
+  const best = new Map<string, { rank: number; value: string }>();
+  for (const row of rows) {
+    const rank = hostRank(row.name, row.host);
+    if (rank < 0) continue;
+    const current = best.get(row.name);
+    if (!current || rank < current.rank) best.set(row.name, { rank, value: row.value });
+  }
+  return Object.fromEntries([...best].map(([name, { value }]) => [name, value]));
+}
 
 function readChromium(browser: ChromiumBrowser): BrowserCredentials {
   const dbPath = join(homedir(), 'Library', 'Application Support', browser.dir, 'Default', 'Cookies');
@@ -73,16 +108,12 @@ function readChromium(browser: ChromiumBrowser): BrowserCredentials {
   try {
     const meta = db.prepare("SELECT value FROM meta WHERE key = 'version'").get() as { value?: string } | undefined;
     const dbVersion = meta?.value ? Number(meta.value) : 0;
-    const out: BrowserCredentials = {};
-    const rows = db.prepare(COOKIE_QUERY).all() as Array<{ name: string; encrypted_value: Uint8Array }>;
-    for (const row of rows) {
+    const query = `SELECT name, host_key, encrypted_value FROM cookies WHERE name IN (${COOKIE_NAMES.map(() => '?').join(',')})`;
+    const rows = db.prepare(query).all(...COOKIE_NAMES) as Array<{ name: string; host_key: string; encrypted_value: Uint8Array }>;
+    return collect(rows.flatMap((row) => {
       const value = decryptCookie(Buffer.from(row.encrypted_value), key, dbVersion >= 24);
-      if (value) {
-        if (row.name === 'arl') out.arl = value;
-        else if (row.name === 'sp_dc') out.spDc = value;
-      }
-    }
-    return out;
+      return value ? [{ name: row.name, host: row.host_key, value }] : [];
+    }));
   } catch {
     return {}; // locked DB / changed schema — skip this browser
   } finally {
@@ -110,7 +141,7 @@ export function parseSafariCookies(buf: Buffer): BrowserCredentials {
   const pageSizes: number[] = [];
   for (let i = 0; i < totalPages; i++) pageSizes.push(buf.readUInt32BE(8 + i * 4));
 
-  const out: BrowserCredentials = {};
+  const found: Array<{ name: string; host: string; value: string }> = [];
   let base = 8 + totalPages * 4;
   for (let p = 0; p < totalPages; p++) {
     const page = buf.subarray(base, base + pageSizes[p]);
@@ -122,12 +153,10 @@ export function parseSafariCookies(buf: Buffer): BrowserCredentials {
       const host = readCStr(page, cookieOffset + page.readUInt32LE(cookieOffset + 16));
       const name = readCStr(page, cookieOffset + page.readUInt32LE(cookieOffset + 20));
       const value = readCStr(page, cookieOffset + page.readUInt32LE(cookieOffset + 28));
-      if (!out.arl && name === 'arl' && host.includes('deezer.com')) out.arl = value;
-      else if (!out.spDc && name === 'sp_dc' && host.includes('spotify.com')) out.spDc = value;
-      if (out.arl && out.spDc) return out;
+      found.push({ name, host, value });
     }
   }
-  return out;
+  return collect(found);
 }
 
 function readSafari(): BrowserCredentials {
@@ -147,26 +176,21 @@ function readSafari(): BrowserCredentials {
 // provider for the config layer to store. Never throws: a missing browser, locked DB, denied
 // keychain, or TCC block just yields {}. Manual paste stays the fallback.
 export function fetchBrowserCredentials(): Record<string, string> {
-  const found = readBrowsers();
-  const credentials: Record<string, string> = {};
-  if (found.arl) credentials.deezer = found.arl;
-  if (found.spDc) credentials.spotify = found.spDc;
-  return credentials;
-}
-
-function readBrowsers(): BrowserCredentials {
   if (platform() !== 'darwin') return {};
-  const result: BrowserCredentials = {};
-  for (const browser of CHROMIUM_BROWSERS) {
-    const found = readChromium(browser);
-    if (found.arl && !result.arl) result.arl = found.arl;
-    if (found.spDc && !result.spDc) result.spDc = found.spDc;
-    if (result.arl && result.spDc) break;
+  const credentials: Record<string, string> = {};
+  // Every backend is read rather than stopping at the first: a user may be logged into Deezer in one
+  // browser and YouTube Music in another.
+  for (const found of [...CHROMIUM_BROWSERS.map(readChromium), readSafari()]) {
+    if (!credentials.deezer && found.arl) credentials.deezer = found.arl;
+    if (!credentials.spotify && found.sp_dc) credentials.spotify = found.sp_dc;
+    // A cookie bundle is only a session as a *set* from one profile, so it is built per browser and
+    // never merged across them — half of one login plus half of another authenticates as neither.
+    // Both backends funnel through the one joiner, so "which cookies, joined how" is decided in a
+    // single place, and that place is testable without a browser.
+    if (!credentials.ytmusic) {
+      const header = cookieHeader(found);
+      if (header) credentials.ytmusic = header;
+    }
   }
-  if (!result.arl || !result.spDc) {
-    const safari = readSafari();
-    if (safari.arl && !result.arl) result.arl = safari.arl;
-    if (safari.spDc && !result.spDc) result.spDc = safari.spDc;
-  }
-  return result;
+  return credentials;
 }

@@ -1,6 +1,7 @@
 import { createCipheriv, pbkdf2Sync } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import { decryptCookie, parseSafariCookies } from '../src/browser.js';
+import { cookieHeader } from '../src/ytmusic.js';
 
 const key = pbkdf2Sync('test-password', 'saltysalt', 1003, 16, 'sha1');
 
@@ -34,48 +35,64 @@ describe('decryptCookie', () => {
   });
 });
 
-describe('parseSafariCookies', () => {
-  // Build a minimal binarycookies buffer: "cook" + one page with one cookie.
-  // Page: 0x00000100 (big-endian) + nCookies (LE) + cookie offset (LE) + 4 bytes
-  // 0x00, then the cookie record at that offset.
-  it('extracts arl and sp_dc from a binarycookies page', () => {
-    const host = '.deezer.com\0';
-    const name = 'arl\0';
-    const path = '/\0';
-    const value = 'abc123arl\0';
-    // Cookie record (64-byte header): [size(4)][unk(4)][flags(4)][unk(4)]
-    //   [host off(4)][name off(4)][path off(4)][value off(4)][comment off(4)]
-    //   [zeros(4)][expiry(8)][created(8)] — string offsets are record-relative.
+// Build a minimal binarycookies buffer: "cook" + one page holding the given cookies.
+// Cookie record (64-byte header): [size(4)][unk(4)][flags(4)][unk(4)]
+//   [host off(4)][name off(4)][path off(4)][value off(4)][comment off(4)]
+//   [zeros(4)][expiry(8)][created(8)] — string offsets are record-relative.
+function binarycookies(cookies: Array<{ host: string; name: string; value: string }>): Buffer {
+  const records = cookies.map(({ host, name, value }) => {
+    const [h, n, p, v] = [`${host}\0`, `${name}\0`, '/\0', `${value}\0`];
     const hostOff = 64;
-    const nameOff = hostOff + host.length;
-    const pathOff = nameOff + name.length;
-    const valueOff = pathOff + path.length;
+    const nameOff = hostOff + h.length;
+    const pathOff = nameOff + n.length;
+    const valueOff = pathOff + p.length;
     const rec = Buffer.alloc(64);
     rec.writeUInt32LE(hostOff, 16);
     rec.writeUInt32LE(nameOff, 20);
     rec.writeUInt32LE(pathOff, 24);
     rec.writeUInt32LE(valueOff, 28);
-    const tail = Buffer.concat([Buffer.from(host), Buffer.from(name), Buffer.from(path), Buffer.from(value)]);
+    return Buffer.concat([rec, Buffer.from(h), Buffer.from(n), Buffer.from(p), Buffer.from(v)]);
+  });
 
-    // Page header: magic 0x00000100 (BE) + nCookies (LE) + offset (LE) + 4 zero bytes = 16 for one cookie.
-    const recordOffset = 16;
-    const pageHeader = Buffer.alloc(16);
-    pageHeader.writeUInt32BE(0x00000100, 0);
-    pageHeader.writeUInt32LE(1, 4);
-    pageHeader.writeUInt32LE(recordOffset, 8);
-    const page = Buffer.concat([pageHeader, rec, tail]);
+  // Page header: magic 0x00000100 (BE) + nCookies (LE) + one offset per cookie (LE) + 4 zero bytes.
+  const headerLength = 12 + records.length * 4;
+  const pageHeader = Buffer.alloc(headerLength);
+  pageHeader.writeUInt32BE(0x00000100, 0);
+  pageHeader.writeUInt32LE(records.length, 4);
+  let offset = headerLength;
+  records.forEach((rec, i) => { pageHeader.writeUInt32LE(offset, 8 + i * 4); offset += rec.length; });
+  const page = Buffer.concat([pageHeader, ...records]);
 
-    // File header: "cook" + totalPages (BE) + pageSize (BE)
-    const fileHeader = Buffer.alloc(12);
-    fileHeader.write('cook', 0, 'latin1');
-    fileHeader.writeUInt32BE(1, 4);
-    fileHeader.writeUInt32BE(page.length, 8);
-    const file = Buffer.concat([fileHeader, page]);
+  // File header: "cook" + totalPages (BE) + pageSize (BE)
+  const fileHeader = Buffer.alloc(12);
+  fileHeader.write('cook', 0, 'latin1');
+  fileHeader.writeUInt32BE(1, 4);
+  fileHeader.writeUInt32BE(page.length, 8);
+  return Buffer.concat([fileHeader, page]);
+}
 
-    expect(parseSafariCookies(file)).toEqual({ arl: 'abc123arl' });
+describe('parseSafariCookies', () => {
+  it('extracts arl and sp_dc from a binarycookies page', () => {
+    expect(parseSafariCookies(binarycookies([{ host: '.deezer.com', name: 'arl', value: 'abc123arl' }]))).toEqual({ arl: 'abc123arl' });
   });
 
   it('rejects a non-cookie buffer', () => {
     expect(parseSafariCookies(Buffer.from('nope'))).toEqual({});
+  });
+
+  it('ignores a wanted cookie name served from the wrong host', () => {
+    expect(parseSafariCookies(binarycookies([{ host: '.evil.example', name: 'arl', value: 'nope' }]))).toEqual({});
+  });
+
+  // The Safari backend's half of AC5: what it finds feeds the same joiner the Chromium backend uses.
+  it('yields Google cookies that the shared joiner turns into a header', () => {
+    const found = parseSafariCookies(binarycookies([
+      { host: '.youtube.com', name: 'SAPISID', value: 'sap' },
+      { host: '.youtube.com', name: 'SID', value: 'sid' },
+      { host: '.google.com', name: 'HSID', value: 'hs' },
+      { host: '.deezer.com', name: 'arl', value: 'arl-value' },
+    ]));
+    expect(found).toEqual({ SAPISID: 'sap', SID: 'sid', HSID: 'hs', arl: 'arl-value' });
+    expect(cookieHeader(found)).toBe('SAPISID=sap; SID=sid; HSID=hs');
   });
 });

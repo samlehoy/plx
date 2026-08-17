@@ -4,6 +4,42 @@
 
 Updated: 2026-08-17
 
+## 2026-08-17 (d)
+
+**YouTube Music browser session credential** (issue #6). Unblocks #7 and #8. Nothing converts yet —
+this delivers a credential that can be obtained, stored, and *proved*.
+
+### Three things that cost real debugging time — read these before touching #7
+
+1. **`__Secure-1PSIDTS` / `__Secure-3PSIDTS` are mandatory.** Without them the `*PSID` cookies are
+   treated as unbound and the request authenticates as **logged out — with HTTP 200 and no hint
+   why**. This looked exactly like broken request signing for several rounds. Pinned by a test.
+2. **A rejected session returns 200 with a signed-out menu.** Validity is therefore judged by
+   whether the response *names an account*, never by the status code. Before this was understood,
+   `validateSession` cheerfully reported a deliberately corrupted SAPISID as working.
+3. **`.google.com` and `.youtube.com` set `SID`/`SAPISID`/etc. to different values.** Taking
+   whichever the cookie store returned first produced a bundle mixing two sessions. Cookies now
+   resolve by explicit host priority (`.youtube.com` first), and a bundle is built **per browser**
+   and never merged across them — half of one login plus half of another authenticates as neither.
+
+### What landed
+
+- **`src/ytmusic.ts`**: the cookie bundle (`YTMUSIC_COOKIES`), the shared `cookieHeader()` joiner,
+  `sapisidHash()` request signing, InnerTube transport, and `validateSession()`.
+- **Both browser backends route through `cookieHeader()`** — the one place "which cookies, joined
+  how" is decided, and the only part of browser reading testable without a keychain.
+- **`ProviderSpec.validate`** added for *every* provider, so the Credentials menu and auto-fetch now
+  prove a credential against the live service and say what happened.
+- **`ProviderSpec.convertible`** hides YouTube Music from the Convert pickers and `--to` while its
+  read/write sides are unbuilt. **Delete this flag once #7 and #8 land.**
+- `YTMUSIC_COOKIE` env override, following the existing per-provider naming.
+- **`vitest.config.ts` added**: vitest was silently collecting tests from a stale git worktree under
+  `.claude/worktrees/`, including `converter.test.ts`/`reverse.test.ts` deleted back in #2. The suite
+  was reporting green partly from code that branch no longer has. True count is 78, not 101.
+
+Verified live against a real logged-in browser: all 18 cookies found, session validated to the
+account name, a corrupted SAPISID correctly reported as expired.
+
 ## 2026-08-17 (c)
 
 **Source and target provider selection** (issue #5). Unblocks #7 and #8 — with #6, the last gate

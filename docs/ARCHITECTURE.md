@@ -62,7 +62,8 @@ mock each one's `fetch`.
 | File | Responsibility |
 |---|---|
 | `src/cli.ts` | Entry. Arg dispatch, interactive menu (`@clack/prompts`), credential prompt + semi-auto fill + persist. Names no provider — it drives off the registry. |
-| `src/registry.ts` | The `ProviderSpec` list: label, link hosts, credential prompt, ref parsing, and how to build each provider. The one place a provider is registered. |
+| `src/registry.ts` | The `ProviderSpec` list: label, link hosts, credential prompt, ref parsing, validation, and how to build each provider. The one place a provider is registered. |
+| `src/ytmusic.ts` | YouTube Music session credential: the cookie bundle, the shared cookie-header joiner, SAPISIDHASH request signing, InnerTube transport, and live session validation. |
 | `src/args.ts` | Pure typed CLI parsing → `CliOptions`. No I/O. |
 | `src/config.ts` | Config dir + `credentials.json` read/write. Holds **one opaque string per provider, keyed by provider name** — it never parses a credential's contents. Per-provider env overrides, `tryAutoFillCredentials`. |
 | `src/browser.ts` | Reads `arl`/`sp_dc` from a logged-in browser (Chromium family decrypt + Safari binarycookies parse). macOS only. |
@@ -92,6 +93,14 @@ The project intentionally uses **unofficial web endpoints**. They can change wit
 | Add to library/rootlist | Pathfinder **v2**, `operationName: "addItemsToRootlist"`, `{ uris: [playlistUri] }` | Hash rotates | `ADD_ITEMS_TO_ROOTLIST_SHA` |
 | Add tracks | Pathfinder **v2**, `operationName: "addToPlaylist"` | Hash rotates | `ADD_TO_PLAYLIST_SHA` |
 | List playlists | Pathfinder **v2**, `operationName: "libraryV3"` | Hash rotates | `LIBRARY_V3_SHA` |
+
+### YouTube Music
+
+| Surface | Endpoint | Fragility |
+|---|---|---|
+| Session credential | The browser cookie bundle for `.youtube.com`, sent as one `Cookie` header | **`__Secure-1PSIDTS` / `__Secure-3PSIDTS` are required.** Without them the `*PSID` cookies are unbound and the request authenticates as **logged out — with a 200 and no error**. Cookies must also come from one profile and prefer `.youtube.com` over `.google.com`, which set the same names to *different* values. |
+| Request signing | `Authorization: SAPISIDHASH <unix-seconds>_<sha1("<ts> <SAPISID> https://music.youtube.com")>`, plus `x-origin` | Mirrors what the web client computes. `SAPISID` may instead be `__Secure-3PAPISID`/`__Secure-1PAPISID`. |
+| Session validation | InnerTube `POST /youtubei/v1/account/account_menu`, client `WEB_REMIX` | **A rejected session returns 200 with a signed-out menu**, so validity is judged by whether the response names an account, never by the status code. |
 
 ### Deezer
 

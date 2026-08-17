@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { parseArgs } from '../src/args.js';
-import { PROVIDERS, inferSource, providerFor, providerKeys } from '../src/registry.js';
+import { PROVIDERS, convertibleProviders, inferSource, providerFor, targetKeys } from '../src/registry.js';
 
 describe('parseArgs', () => {
   it('takes a link plus an explicit target provider', () => {
@@ -38,6 +38,9 @@ describe('inferSource', () => {
     ['https://www.deezer.com/en/playlist/1234567890', 'deezer'],
     ['https://link.deezer.com/s/abc', 'deezer'],
     ['HTTPS://OPEN.SPOTIFY.COM/playlist/abc', 'spotify'],
+    // A YouTube Music playlist id is a YouTube playlist id, so both hosts name the same thing.
+    ['https://music.youtube.com/playlist?list=PLabc', 'ytmusic'],
+    ['https://www.youtube.com/playlist?list=PLabc', 'ytmusic'],
   ])('reads the provider off %s', (link, key) => {
     expect(inferSource(link)?.key).toBe(key);
   });
@@ -55,15 +58,22 @@ describe('the provider registry', () => {
     expect(providerFor('napster')).toBeUndefined();
   });
 
-  it('names its valid targets for the error message', () => {
-    expect(providerKeys()).toEqual(['spotify', 'deezer']);
+  it('offers only providers that can be written into as --to targets', () => {
+    expect(targetKeys()).toEqual(['spotify', 'deezer']);
+    expect(targetKeys()).not.toContain('ytmusic'); // registered for credentials, not yet convertible
   });
 
-  // Every direction is source × target minus the identity pairs: 2 providers → 2, 3 → 6.
-  it('offers every ordered pair of distinct providers as a direction', () => {
+  // Every direction is source × target minus the identity pairs, so three providers give six.
+  it('reaches N×(N-1) directions once every provider is convertible', () => {
     const directions = PROVIDERS.flatMap((s) => PROVIDERS.filter((t) => t !== s).map((t) => `${s.key}->${t.key}`));
-    expect(directions).toEqual(['spotify->deezer', 'deezer->spotify']);
     expect(directions).toHaveLength(PROVIDERS.length * (PROVIDERS.length - 1));
+    expect(directions).toHaveLength(6);
+  });
+
+  it('currently runs the two directions whose providers are both built', () => {
+    const ready = convertibleProviders();
+    expect(ready.flatMap((s) => ready.filter((t) => t !== s).map((t) => `${s.key}->${t.key}`)))
+      .toEqual(['spotify->deezer', 'deezer->spotify']);
   });
 
   it('gives every provider the fields the menu and command line read', () => {

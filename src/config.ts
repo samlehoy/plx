@@ -11,7 +11,7 @@ export type Config = { credentials: Record<string, string>; recentUrls: string[]
 
 // The env override for each provider. The variable name is historical per provider; the value it
 // carries is still opaque here.
-const ENV_VAR: Record<string, string> = { deezer: 'DEEZER_ARL', spotify: 'SPOTIFY_DC' };
+const ENV_VAR: Record<string, string> = { deezer: 'DEEZER_ARL', spotify: 'SPOTIFY_DC', ytmusic: 'YTMUSIC_COOKIE' };
 
 // The pre-provider-keyed shape stored one named field per cookie. These are deliberately not
 // migrated (see #1): they are ignored, dropped on the next write, and the user re-fetches or
