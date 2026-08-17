@@ -2,7 +2,7 @@
 import { confirm, intro, isCancel, outro, password, select, text } from '@clack/prompts';
 import { credential, loadConfig, saveCredential, saveRecentUrl, tryAutoFillCredentials, type Config } from './config.js';
 import { Conversion } from './conversion.js';
-import { PROVIDERS, convertibleProviders, inferSource, providerFor, targetKeys, type ProviderSpec } from './registry.js';
+import { PROVIDERS, inferSource, providerFor, targetKeys, type ProviderSpec } from './registry.js';
 import { HELP_TEXT, parseArgs, type CliOptions } from './args.js';
 import type { Provider } from './types.js';
 
@@ -99,7 +99,9 @@ async function pickSourcePlaylist(cfg: Config, spec: ProviderSpec, provider: Pro
     : String(pick);
   if (isCancel(ref) || !ref || String(ref).toLowerCase() === 'q') return null;
   const id = await spec.parseRef(String(ref));
-  return { id, name: await spec.playlistName(id), ref: String(ref) };
+  // A provider that can resolve its own titles does it better than the registry's fallback.
+  const name = (await provider.playlistName?.(id).catch(() => '')) || await spec.playlistName(id);
+  return { id, name, ref: String(ref) };
 }
 
 async function pickFromAccount(provider: Provider, spec: ProviderSpec, role: string): Promise<{ id: string; title: string } | null> {
@@ -143,9 +145,9 @@ async function pickTargetPlaylist(spec: ProviderSpec, provider: Provider): Promi
 
 // One flow for every direction: pick source provider, pick target provider, then convert.
 async function runConversion(cfg: Config, options: CliOptions): Promise<void> {
-  const sourceSpec = await pickProvider('Source provider', convertibleProviders());
+  const sourceSpec = await pickProvider('Source provider', PROVIDERS);
   if (!sourceSpec) return;
-  const targetSpec = await pickProvider('Target provider', convertibleProviders(), sourceSpec);
+  const targetSpec = await pickProvider('Target provider', PROVIDERS, sourceSpec);
   if (!targetSpec) return;
 
   const source = await build(cfg, sourceSpec, false);
@@ -249,14 +251,12 @@ async function main() {
       ? `Unknown target provider '${options.target}'. Valid targets: ${targetKeys().join(', ')}.`
       : `No target provider. Name one with --to <${targetKeys().join('|')}>.`);
   }
-  if (!targetSpec.convertible) throw new Error(`Writing into ${targetSpec.label} is not built yet. Valid targets: ${targetKeys().join(', ')}.`);
 
   const cfg = await loadConfig();
   if (cfg.legacyCredentials) console.log('⚠️ Saved credentials are in an older format and were not carried over. Run `plx` and re-enter them (one browser dialog).');
 
   for (const raw of options.urls) {
     const sourceSpec = inferSource(raw);
-    if (sourceSpec && !sourceSpec.convertible) throw new Error(`Reading from ${sourceSpec.label} is not built yet.`);
     if (!sourceSpec) throw new Error(`Cannot tell which provider '${raw}' belongs to. Use a link from one of: ${PROVIDERS.map((p) => p.label).join(', ')}.`);
     if (sourceSpec === targetSpec) throw new Error(`Source and target are both ${sourceSpec.label}.`);
 
@@ -267,7 +267,8 @@ async function main() {
     const conversion = new Conversion(source, target, options.output);
     try {
       const id = await sourceSpec.parseRef(raw);
-      const name = await sourceSpec.playlistName(id);
+      // A provider that can resolve its own titles does it better than the registry's fallback.
+      const name = (await source.playlistName?.(id).catch(() => '')) || await sourceSpec.playlistName(id);
       const result = await conversion.matchPlaylist({ name, uri: id }, options.dryRun);
       if (!options.dryRun && result.matchedIds.length) await conversion.writePlaylist(name, result.matchedIds);
     } finally {

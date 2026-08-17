@@ -4,15 +4,16 @@ Source of truth for the system's design and its external contracts. Read this be
 
 ## Goal
 
-`plx` is a personal Spotify ⇄ Deezer playlist converter distributed as a CLI (`npm install -g plx`). It reads a Spotify playlist **without a Spotify account, Premium, or OAuth**:
+`plx` is a personal playlist converter for Spotify, Deezer, and YouTube Music, distributed as a CLI (`npm install -g plx`). It uses the user's own logged-in browser session, never a developer account or an official API (ADR 0001):
 
 ```bash
 plx --url "https://open.spotify.com/playlist/PLAYLIST_ID" --dry-run
 ```
 
-Both directions are supported:
-- **Spotify → Deezer** — reads Spotify anonymously, writes via a Deezer `arl` cookie.
-- **Deezer → Spotify** — reads via `arl`, writes via a Spotify `sp_dc` web-session cookie.
+All six directions are supported — every provider is a peer, so any can be the source and any the
+target. Each is authenticated by a browser session credential: Spotify `sp_dc`, Deezer `arl`, and a
+whole cookie header for YouTube Music. Reading a public Spotify playlist needs no credential at all,
+which is what makes a credential-free `--dry-run` possible.
 
 ## Flow
 
@@ -52,10 +53,10 @@ direction-specific code. The pieces:
 Providers meet only in `Conversion`, which is why the conversion tests supply providers directly and
 mock each one's `fetch`.
 
-| Capability | Spotify | Deezer |
-|---|---|---|
-| `reorder` | ✗ — no move primitive in the endpoints plx uses; a Spotify target is dedupe-and-append | ✓ by track id |
-| `resolveTrack` | ✓ — every match into a Spotify target is verified | ✗ — matches into Deezer are unverified |
+| Capability | Spotify | Deezer | YouTube Music |
+|---|---|---|---|
+| `reorder` | ✗ — no move primitive in the endpoints plx uses; a Spotify target is dedupe-and-append | ✓ by track id | ✓ by `setVideoId`, mapped from track id inside the provider |
+| `resolveTrack` | ✓ — every match into a Spotify target is verified | ✗ — matches into Deezer are unverified | ✓ via `player` |
 
 ## Module map
 
@@ -63,7 +64,9 @@ mock each one's `fetch`.
 |---|---|
 | `src/cli.ts` | Entry. Arg dispatch, interactive menu (`@clack/prompts`), credential prompt + semi-auto fill + persist. Names no provider — it drives off the registry. |
 | `src/registry.ts` | The `ProviderSpec` list: label, link hosts, credential prompt, ref parsing, validation, and how to build each provider. The one place a provider is registered. |
-| `src/ytmusic.ts` | YouTube Music session credential: the cookie bundle, the shared cookie-header joiner, SAPISIDHASH request signing, InnerTube transport, and live session validation. |
+| `src/ytmusic.ts` | YouTube Music credential + transport: the cookie bundle, the shared cookie-header joiner, SAPISIDHASH signing, InnerTube calls, session validation, playlist-ref parsing, mix detection. |
+| `src/ytmusic-parse.ts` | Pure parsing of InnerTube responses. Pinned by fixtures recorded from the real service (`tests/fixtures/ytmusic/`). No I/O. |
+| `src/ytmusic-provider.ts` | `YtMusicProvider` (a `Provider`): read, search songs then videos, create/add, verify, and reorder by `setVideoId`. |
 | `src/args.ts` | Pure typed CLI parsing → `CliOptions`. No I/O. |
 | `src/config.ts` | Config dir + `credentials.json` read/write. Holds **one opaque string per provider, keyed by provider name** — it never parses a credential's contents. Per-provider env overrides, `tryAutoFillCredentials`. |
 | `src/browser.ts` | Reads `arl`/`sp_dc` from a logged-in browser (Chromium family decrypt + Safari binarycookies parse). macOS only. |
@@ -101,6 +104,11 @@ The project intentionally uses **unofficial web endpoints**. They can change wit
 | Session credential | The browser cookie bundle for `.youtube.com`, sent as one `Cookie` header | **`__Secure-1PSIDTS` / `__Secure-3PSIDTS` are required.** Without them the `*PSID` cookies are unbound and the request authenticates as **logged out — with a 200 and no error**. Cookies must also come from one profile and prefer `.youtube.com` over `.google.com`, which set the same names to *different* values. |
 | Request signing | `Authorization: SAPISIDHASH <unix-seconds>_<sha1("<ts> <SAPISID> https://music.youtube.com")>`, plus `x-origin` | Mirrors what the web client computes. `SAPISID` may instead be `__Secure-3PAPISID`/`__Secure-1PAPISID`. |
 | Session validation | InnerTube `POST /youtubei/v1/account/account_menu`, client `WEB_REMIX` | **A rejected session returns 200 with a signed-out menu**, so validity is judged by whether the response names an account, never by the status code. |
+| Playlist read | `POST browse` with `browseId: VL<playlistId>`, following `continuationItemRenderer` tokens | Entries are `musicResponsiveListItemRenderer`, ~6 levels deep; the path differs between browse, search, and continuation, so the parser walks rather than indexes. Title comes from `microformat`. |
+| Song vs music video | `watchEndpointMusicConfig.musicVideoType` | Only `MUSIC_VIDEO_TYPE_ATV` is a catalog song. `OMV`, `UGC`, `OFFICIAL_SOURCE_MUSIC` and a missing type are all treated as videos — their stated artist is the uploading channel. |
+| Search | `POST search` with the web client's filter `params` — songs and music videos are separate filters | A playlist read puts duration in a fixed column; a search trails it on the subtitle line (`Artist • Album • 3:49`). |
+| Create / add / reorder | `POST playlist/create` (`privacyStatus: PRIVATE`), `POST browse/edit_playlist` with `ACTION_ADD_VIDEO` / `ACTION_MOVE_VIDEO_BEFORE` | Reorder moves by `setVideoId`, an opaque per-item handle that is **not** the video id — the same song added twice has two. Resolved inside the provider (ADR 0002). |
+| Track metadata (verify) | `POST player` → `videoDetails` | Flat, unlike everything else here. A catalog track's `author` is the artist's auto-generated `"<Artist> - Topic"` channel. |
 
 ### Deezer
 
@@ -124,6 +132,9 @@ The project intentionally uses **unofficial web endpoints**. They can change wit
 1. `exact` — normalized title + first artist equal, duration within ±3s.
 2. `fuzzy-duration` — title + artist equal, duration ignored (live/remaster variants).
 3. `fuzzy-title` — one normalized title contains the other + artist equal.
+4. `video` — **YouTube Music only**, and only after the catalog returns nothing. The artist rule relaxes to containment (the source artist must appear in the video's title *or* channel name) because a video's stated artist is usually the uploader; in exchange the duration tolerance becomes **mandatory**, and a candidate with no duration is rejected. Duration is the only guard left, and it is what separates the same recording uploaded as a video from someone else's cover.
+
+The tier set is open, not a closed enum every provider shares (ADR 0003) — `video` is the first tier only one provider can produce.
 
 `normalize` strips accents, parentheticals, `(feat./ft.)` labels, punctuation, and collapses whitespace.
 

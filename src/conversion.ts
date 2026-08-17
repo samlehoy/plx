@@ -22,12 +22,27 @@ export class Conversion {
   async matchPlaylist(playlist: PlaylistRef, dryRun = false): Promise<MatchResult> {
     let result;
     try { result = await this.source.readPlaylist(playlist.uri); }
-    catch (error) { this.record({ playlist: playlist.name, title: '', artist: '', isrc: null, matched: false, note: `failed to read playlist: ${error instanceof Error ? error.name : 'Error'}` }); return { matchedIds: [], total: 0, truncated: false }; }
+    catch (error) {
+      // The message, not the name: every throw in this codebase is a plain Error, so `error.name` is
+      // always the literal "Error" and the one diagnostic the report carries would say nothing. It
+      // is also where a refusal explains itself — a mix, say — so it has to reach the user.
+      const reason = error instanceof Error ? error.message : String(error);
+      this.record({ playlist: playlist.name, title: '', artist: '', isrc: null, matched: false, note: `failed to read playlist: ${reason}` });
+      console.log(`[${playlist.name}] ✗ ${reason}`);
+      return { matchedIds: [], total: 0, truncated: false };
+    }
     if (result.truncated) {
       // The provider hit its own read cap; how many it managed is the only limit the path knows.
       this.record({ playlist: playlist.name, title: '', artist: '', isrc: null, matched: false, note: `WARNING: truncated at ${result.tracks.length} tracks; remainder not converted` });
       console.log(`[${playlist.name}] ⚠️ Truncated at ${result.tracks.length} tracks.`);
     }
+    // Entries the source refused to convert are recorded before the matched ones, as their own kind
+    // of row: they were never searched for, so calling them "no match" would misreport them.
+    for (const entry of result.skipped ?? []) {
+      this.record({ playlist: playlist.name, title: entry.name, artist: entry.artist, isrc: null, matched: false, note: 'skipped: music video (channel name is not a reliable artist)' });
+    }
+    if (result.skipped?.length) console.log(`[${playlist.name}] ${result.skipped.length} music video${result.skipped.length === 1 ? '' : 's'} skipped.`);
+
     const matchedIds: string[] = [];
     let verified = 0;
     for (let i = 0; i < result.tracks.length; i += 1) {
@@ -35,7 +50,7 @@ export class Conversion {
       let match: Match | null = null;
       for (let attempt = 0; attempt < 3; attempt += 1) {
         try { match = await this.target.search(track); break; }
-        catch (error) { if (attempt === 2) console.log(`  ⚠️ search failed: ${error instanceof Error ? error.name : 'Error'}`); else await sleep(2 ** attempt * 1000); }
+        catch (error) { if (attempt === 2) console.log(`  ⚠️ search failed: ${error instanceof Error ? error.message : 'error'}`); else await sleep(2 ** attempt * 1000); }
       }
       if (match) {
         const flag = await this.verify(track, match);

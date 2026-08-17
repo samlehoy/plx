@@ -1,10 +1,10 @@
 # plx
 
-Spotify ⇄ Deezer playlist converter CLI.
+Playlist converter CLI for Spotify, Deezer, and YouTube Music.
 
-Converts playlists in both directions — reads Spotify **without an account, Premium, or OAuth**; writes via your session cookies.
+Converts a playlist from any of the three services into any other — six directions — using your own logged-in browser session. No developer account, no OAuth, no API keys.
 
-> ⚠️ **Personal, non-commercial use.** Uses unofficial web endpoints that can change or break without notice. Not affiliated with Spotify or Deezer.
+> ⚠️ **Personal, non-commercial use.** Uses unofficial web endpoints that can change or break without notice. Not affiliated with Spotify, Deezer, or YouTube.
 
 ## Install
 
@@ -20,6 +20,7 @@ Requires Node.js ≥ 22.
 plx                                                        # interactive menu
 plx --url "https://open.spotify.com/playlist/ID" --to deezer
 plx --url "https://www.deezer.com/playlist/ID" --to spotify
+plx --url "https://music.youtube.com/playlist?list=ID" --to deezer
 plx --url "<LINK>" --to deezer --dry-run                   # preview matches without writing
 ```
 

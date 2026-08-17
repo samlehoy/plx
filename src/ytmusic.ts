@@ -112,3 +112,24 @@ export async function validateSession(cookie: string): Promise<string> {
   if (!account) throw new Error(EXPIRED);
   return account;
 }
+
+// --- Playlist ids ----------------------------------------------------------
+
+// A YouTube Music playlist id *is* a YouTube playlist id, so both hosts name the same thing.
+export function parsePlaylistRef(ref: string): string {
+  const input = ref.trim();
+  if (/^https?:\/\//i.test(input)) {
+    try {
+      const list = new URL(input).searchParams.get('list');
+      if (list) return list;
+      const last = new URL(input).pathname.replace(/\/+$/, '').split('/').pop() ?? '';
+      return last.replace(/^VL/, '');
+    } catch { /* fall through to the raw value */ }
+  }
+  return input.replace(/^VL/, '');
+}
+
+// A mix (radio) regenerates on every visit: its contents are not reproducible, so it is not a
+// playlist and plx refuses it as a source. Every mix id starts with RD — RDCLAK, RDAMVM, RDEM…
+// Checked on the id so the reason is explicit, rather than surfacing as an empty read.
+export const isMix = (playlistId: string) => /^RD/i.test(parsePlaylistRef(playlistId));

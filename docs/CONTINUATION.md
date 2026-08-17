@@ -4,6 +4,42 @@
 
 Updated: 2026-08-17
 
+## 2026-08-17 (e) — the provider is complete
+
+**#3 provider-neutral report, #7 read, #8 write, #9 music video fallback, #10 reorder.** All six
+directions now run. `ProviderSpec.convertible`, the temporary flag from #6, is deleted.
+
+### Verified against the live service, not just stubs
+
+- **YouTube Music → Deezer**: a 180-entry playlist read with pagination — 38 songs converted,
+  **141 music videos skipped** and recorded as their own report row.
+- **Spotify → YouTube Music** and **Deezer → YouTube Music**: 4/4 matched and verified, playlist
+  created private, re-running into the same playlist added 0 (dedupe), then **deleted** — the test
+  account is left as it was.
+- **Reorder**: applied to a real playlist, order matched exactly; a second call on the now-ordered
+  playlist returned false without editing.
+- A **mix** is refused with its reason; `music.youtube.com` and `youtube.com` links resolve to the
+  same playlist.
+
+### Things worth knowing
+
+- **Only `MUSIC_VIDEO_TYPE_ATV` is a catalog song.** `OMV`, `UGC`, `OFFICIAL_SOURCE_MUSIC`, and
+  entries with no type at all are videos or unavailable. All four appear in a real playlist and all
+  four are in the fixture.
+- **`parseDuration` must return null, not 0, for non-durations.** A playlist read has a duration
+  column and a search result does not; callers tell them apart by null. Returning 0 for an empty
+  column silently swallowed the subtitle fallback — caught by the recorded fixtures, which is
+  exactly why the ticket demanded real responses over hand-written literals.
+- **Verification uses `player` → `videoDetails`**, which is flat, rather than the ~6-level renderer
+  nesting everything else needs. A catalog track's `author` is the `"<Artist> - Topic"` channel.
+- **`error.name` → `error.message` in Conversion.** Every throw here is a plain `Error`, so the
+  report's one diagnostic field always read the literal "Error" — which silently swallowed the mix
+  refusal's explanation. This was flagged in the #2 review and only became an AC failure here.
+- **Reorder moves by `setVideoId`**, an opaque per-item handle — the same song added twice has two.
+  Mapped from track id inside the provider; it never reaches the conversion interface (ADR 0002).
+- `YtMusicProvider.deletePlaylist` is deliberately **not** on the `Provider` interface. plx never
+  deletes during a conversion; it exists so a live write test can clean up after itself.
+
 ## 2026-08-17 (d)
 
 **YouTube Music browser session credential** (issue #6). Unblocks #7 and #8. Nothing converts yet —

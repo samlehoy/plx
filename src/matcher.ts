@@ -16,3 +16,26 @@ export function matchCandidates(title: string, artist: string, durationMs: numbe
   return null;
 }
 export function matchTrack(track: Track, candidates: Candidate[]): Match | null { return matchCandidates(track.name, track.artist, track.durationMs, candidates); }
+
+// Match rules for a music video, used only after the catalog has produced nothing.
+//
+// A music video's stated artist is usually the uploading channel, so the artist rule relaxes from
+// equality to containment: the source artist must appear somewhere in the video's title or channel
+// name. That is a much weaker guard, so in exchange the duration tolerance becomes **mandatory**
+// rather than optional — a candidate with no duration is rejected outright. Duration is what
+// separates the same recording uploaded as a video from someone else's cover of it.
+export function matchVideoCandidates(title: string, artist: string, durationMs: number | null | undefined, candidates: Candidate[]): Match | null {
+  if (durationMs == null) return null; // nothing left to guard with
+  const nt = normalize(stripFeat(title));
+  const na = artistKey(firstArtist(artist));
+  if (!nt || !na) return null;
+  for (const c of candidates) {
+    if (c.duration == null || !matchDurationMs(durationMs, c.duration)) continue;
+    const ct = normalize(c.title);
+    // The source artist has to show up somewhere attributable — the video's title or its channel.
+    if (!artistKey(c.title).includes(na) && !artistKey(c.artist).includes(na)) continue;
+    if (!ct.includes(nt) && !nt.includes(ct)) continue;
+    return { id: c.id, title: c.title, artist: c.artist, method: 'video' };
+  }
+  return null;
+}

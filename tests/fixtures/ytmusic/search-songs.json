@@ -1,0 +1,304 @@
+{
+ "contents": {
+  "items": [
+   {
+    "musicResponsiveListItemRenderer": {
+     "flexColumns": [
+      {
+       "musicResponsiveListItemFlexColumnRenderer": {
+        "text": {
+         "runs": [
+          {
+           "text": "Fortnight (feat. Post Malone)"
+          }
+         ]
+        }
+       }
+      },
+      {
+       "musicResponsiveListItemFlexColumnRenderer": {
+        "text": {
+         "runs": [
+          {
+           "text": "Taylor Swift"
+          },
+          {
+           "text": " • "
+          },
+          {
+           "text": "THE TORTURED POETS DEPARTMENT"
+          },
+          {
+           "text": " • "
+          },
+          {
+           "text": "3:49"
+          }
+         ]
+        }
+       }
+      },
+      {
+       "musicResponsiveListItemFlexColumnRenderer": {
+        "text": {
+         "runs": [
+          {
+           "text": "313M plays"
+          }
+         ]
+        }
+       }
+      }
+     ],
+     "playlistItemData": {
+      "videoId": "eXrmLd5mer4"
+     },
+     "overlay": {
+      "musicItemThumbnailOverlayRenderer": {
+       "content": {
+        "musicPlayButtonRenderer": {
+         "playNavigationEndpoint": {
+          "clickTrackingParams": "CPMCEMjeAiITCOjjnLGAqJYDFSlGnQkd8m8W-8oBBB6bSC8=",
+          "watchEndpoint": {
+           "videoId": "eXrmLd5mer4",
+           "watchEndpointMusicSupportedConfigs": {
+            "watchEndpointMusicConfig": {
+             "musicVideoType": "MUSIC_VIDEO_TYPE_ATV"
+            }
+           }
+          }
+         }
+        }
+       }
+      }
+     }
+    }
+   },
+   {
+    "musicResponsiveListItemRenderer": {
+     "flexColumns": [
+      {
+       "musicResponsiveListItemFlexColumnRenderer": {
+        "text": {
+         "runs": [
+          {
+           "text": "Fortnight (Acoustic Version) (feat. Post Malone)"
+          }
+         ]
+        }
+       }
+      },
+      {
+       "musicResponsiveListItemFlexColumnRenderer": {
+        "text": {
+         "runs": [
+          {
+           "text": "Taylor Swift"
+          },
+          {
+           "text": " • "
+          },
+          {
+           "text": "Fortnight (Acoustic Version)"
+          },
+          {
+           "text": " • "
+          },
+          {
+           "text": "3:49"
+          }
+         ]
+        }
+       }
+      },
+      {
+       "musicResponsiveListItemFlexColumnRenderer": {
+        "text": {
+         "runs": [
+          {
+           "text": "5.6M plays"
+          }
+         ]
+        }
+       }
+      }
+     ],
+     "playlistItemData": {
+      "videoId": "ikzjwDcxaNc"
+     },
+     "overlay": {
+      "musicItemThumbnailOverlayRenderer": {
+       "content": {
+        "musicPlayButtonRenderer": {
+         "playNavigationEndpoint": {
+          "clickTrackingParams": "COECEMjeAiITCOjjnLGAqJYDFSlGnQkd8m8W-8oBBB6bSC8=",
+          "watchEndpoint": {
+           "videoId": "ikzjwDcxaNc",
+           "watchEndpointMusicSupportedConfigs": {
+            "watchEndpointMusicConfig": {
+             "musicVideoType": "MUSIC_VIDEO_TYPE_ATV"
+            }
+           }
+          }
+         }
+        }
+       }
+      }
+     }
+    }
+   },
+   {
+    "musicResponsiveListItemRenderer": {
+     "flexColumns": [
+      {
+       "musicResponsiveListItemFlexColumnRenderer": {
+        "text": {
+         "runs": [
+          {
+           "text": "Guilty as Sin?"
+          }
+         ]
+        }
+       }
+      },
+      {
+       "musicResponsiveListItemFlexColumnRenderer": {
+        "text": {
+         "runs": [
+          {
+           "text": "Taylor Swift"
+          },
+          {
+           "text": " • "
+          },
+          {
+           "text": "THE TORTURED POETS DEPARTMENT"
+          },
+          {
+           "text": " • "
+          },
+          {
+           "text": "4:15"
+          }
+         ]
+        }
+       }
+      },
+      {
+       "musicResponsiveListItemFlexColumnRenderer": {
+        "text": {
+         "runs": [
+          {
+           "text": "120M plays"
+          }
+         ]
+        }
+       }
+      }
+     ],
+     "playlistItemData": {
+      "videoId": "rpLCx-fkEX0"
+     },
+     "overlay": {
+      "musicItemThumbnailOverlayRenderer": {
+       "content": {
+        "musicPlayButtonRenderer": {
+         "playNavigationEndpoint": {
+          "clickTrackingParams": "CM8CEMjeAiITCOjjnLGAqJYDFSlGnQkd8m8W-8oBBB6bSC8=",
+          "watchEndpoint": {
+           "videoId": "rpLCx-fkEX0",
+           "watchEndpointMusicSupportedConfigs": {
+            "watchEndpointMusicConfig": {
+             "musicVideoType": "MUSIC_VIDEO_TYPE_ATV"
+            }
+           }
+          }
+         }
+        }
+       }
+      }
+     }
+    }
+   },
+   {
+    "musicResponsiveListItemRenderer": {
+     "flexColumns": [
+      {
+       "musicResponsiveListItemFlexColumnRenderer": {
+        "text": {
+         "runs": [
+          {
+           "text": "Fortnight (BLOND:ISH Remix) (feat. Post Malone)"
+          }
+         ]
+        }
+       }
+      },
+      {
+       "musicResponsiveListItemFlexColumnRenderer": {
+        "text": {
+         "runs": [
+          {
+           "text": "Taylor Swift"
+          },
+          {
+           "text": " & "
+          },
+          {
+           "text": "BLOND:ISH"
+          },
+          {
+           "text": " • "
+          },
+          {
+           "text": "Fortnight (BLOND:ISH Remix)"
+          },
+          {
+           "text": " • "
+          },
+          {
+           "text": "3:37"
+          }
+         ]
+        }
+       }
+      },
+      {
+       "musicResponsiveListItemFlexColumnRenderer": {
+        "text": {
+         "runs": [
+          {
+           "text": "6.1M plays"
+          }
+         ]
+        }
+       }
+      }
+     ],
+     "playlistItemData": {
+      "videoId": "MpOvl2zZscQ"
+     },
+     "overlay": {
+      "musicItemThumbnailOverlayRenderer": {
+       "content": {
+        "musicPlayButtonRenderer": {
+         "playNavigationEndpoint": {
+          "clickTrackingParams": "CL0CEMjeAiITCOjjnLGAqJYDFSlGnQkd8m8W-8oBBB6bSC8=",
+          "watchEndpoint": {
+           "videoId": "MpOvl2zZscQ",
+           "watchEndpointMusicSupportedConfigs": {
+            "watchEndpointMusicConfig": {
+             "musicVideoType": "MUSIC_VIDEO_TYPE_ATV"
+            }
+           }
+          }
+         }
+        }
+       }
+      }
+     }
+    }
+   }
+  ]
+ }
+}

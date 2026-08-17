@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { parseArgs } from '../src/args.js';
-import { PROVIDERS, convertibleProviders, inferSource, providerFor, targetKeys } from '../src/registry.js';
+import { PROVIDERS, inferSource, providerFor, targetKeys } from '../src/registry.js';
 
 describe('parseArgs', () => {
   it('takes a link plus an explicit target provider', () => {
@@ -58,22 +58,19 @@ describe('the provider registry', () => {
     expect(providerFor('napster')).toBeUndefined();
   });
 
-  it('offers only providers that can be written into as --to targets', () => {
-    expect(targetKeys()).toEqual(['spotify', 'deezer']);
-    expect(targetKeys()).not.toContain('ytmusic'); // registered for credentials, not yet convertible
+  it('offers every provider as a --to target', () => {
+    expect(targetKeys()).toEqual(['spotify', 'deezer', 'ytmusic']);
   });
 
   // Every direction is source × target minus the identity pairs, so three providers give six.
-  it('reaches N×(N-1) directions once every provider is convertible', () => {
+  it('reaches all six directions across three providers', () => {
     const directions = PROVIDERS.flatMap((s) => PROVIDERS.filter((t) => t !== s).map((t) => `${s.key}->${t.key}`));
     expect(directions).toHaveLength(PROVIDERS.length * (PROVIDERS.length - 1));
-    expect(directions).toHaveLength(6);
-  });
-
-  it('currently runs the two directions whose providers are both built', () => {
-    const ready = convertibleProviders();
-    expect(ready.flatMap((s) => ready.filter((t) => t !== s).map((t) => `${s.key}->${t.key}`)))
-      .toEqual(['spotify->deezer', 'deezer->spotify']);
+    expect(directions).toEqual([
+      'spotify->deezer', 'spotify->ytmusic',
+      'deezer->spotify', 'deezer->ytmusic',
+      'ytmusic->spotify', 'ytmusic->deezer',
+    ]);
   });
 
   it('gives every provider the fields the menu and command line read', () => {

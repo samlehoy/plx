@@ -1,6 +1,7 @@
 import { DeezerClient, resolveDeezerPlaylistId } from './deezer.js';
 import { SpotifyProvider, anonymousToken, authenticatedToken, parsePlaylistId, playlistName } from './spotify.js';
-import { validateSession } from './ytmusic.js';
+import { parsePlaylistRef, validateSession } from './ytmusic.js';
+import { YtMusicProvider } from './ytmusic-provider.js';
 import type { Provider } from './types.js';
 
 // Everything the CLI needs to know about a provider that is not part of converting: what to call it,
@@ -18,10 +19,6 @@ export type ProviderSpec = {
   loginSite: string;
   // Whether this provider can read a playlist with no credential at all (so a dry run needs none).
   anonymousRead: boolean;
-  // Whether this provider can take part in a conversion yet. A provider whose credential works but
-  // whose read/write side is not built is offered in Credentials and hidden from Convert, so it is
-  // never picked as a direction that cannot run. Drop the flag once every provider is convertible.
-  convertible: boolean;
   // Prove the stored credential against the live service, resolving to something to show the user
   // (an account name, say). Throws with a specific message when the session is expired or rejected.
   validate(credential: string): Promise<string>;
@@ -42,7 +39,6 @@ const spotify: ProviderSpec = {
   credentialHint: 'login open.spotify.com → F12 → Application → Cookies → sp_dc → copy value',
   loginSite: 'Spotify (open.spotify.com)',
   anonymousRead: true,
-  convertible: true,
   parseRef: async (ref) => parsePlaylistId(ref),
   playlistName,
   // An sp_dc mints a full search+write token; without one the anonymous token still reads public
@@ -60,7 +56,6 @@ const deezer: ProviderSpec = {
   loginSite: 'Deezer (deezer.com)',
   // Deezer's search is public, but reading a *playlist* goes through the authenticated GraphQL API.
   anonymousRead: false,
-  convertible: true,
   parseRef: resolveDeezerPlaylistId,
   playlistName: async (id) => id,
   validate: async (cred) => `account ${(await new DeezerClient(cred).getMe()).id}`,
@@ -82,25 +77,21 @@ const ytmusic: ProviderSpec = {
   credentialHint: 'login music.youtube.com → F12 → Network → any request → Request Headers → copy the whole "cookie:" value',
   loginSite: 'YouTube Music (music.youtube.com)',
   anonymousRead: false,
-  // Reading and writing land in #7 and #8; this release only proves the credential works.
-  convertible: false,
-  parseRef: async (ref) => new URL(ref, 'https://music.youtube.com').searchParams.get('list') ?? ref.trim(),
+  parseRef: async (ref) => parsePlaylistRef(ref),
+  // The title needs an authenticated browse, so YtMusicProvider resolves it; this is the fallback.
   playlistName: async (id) => id,
-  create: () => { throw new Error('Converting with YouTube Music is not built yet.'); },
+  create: async (cred) => new YtMusicProvider(cred),
   validate: validateSession,
 };
 
 export const PROVIDERS: ProviderSpec[] = [spotify, deezer, ytmusic];
 
-// The providers that can actually take part in a conversion right now.
-export const convertibleProviders = (): ProviderSpec[] => PROVIDERS.filter((p) => p.convertible);
-
 export function providerFor(key: string): ProviderSpec | undefined {
   return PROVIDERS.find((p) => p.key === key.toLowerCase());
 }
 
-// The keys valid after --to. Only providers that can actually be written into are offered.
-export const targetKeys = (): string[] => convertibleProviders().map((p) => p.key);
+// The keys valid after --to.
+export const targetKeys = (): string[] => PROVIDERS.map((p) => p.key);
 
 // Which provider a playlist link belongs to. The link already names its service, so a command line
 // that gives one never has to restate the source.
