@@ -1,9 +1,11 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 const INSTALL = 'npm i -g plx-converter'
 const GITHUB = 'https://github.com/samlehoy/plx'
 const NPM = 'https://www.npmjs.com/package/plx-converter'
 const DOCS = 'https://github.com/samlehoy/plx/tree/master/docs'
+const ARL_GUIDE = 'https://github.com/samlehoy/plx/blob/master/docs/CONFIG.md#getting-the-cookies'
+const NODEJS = 'https://nodejs.org'
 
 type Tier = {
   id: string
@@ -97,6 +99,64 @@ function useReducedMotion(): boolean {
     return () => mq.removeEventListener('change', onChange)
   }, [])
   return reduce
+}
+
+async function copyToClipboard(text: string): Promise<boolean> {
+  try {
+    await navigator.clipboard.writeText(text)
+    return true
+  } catch {
+    try {
+      const ta = document.createElement('textarea')
+      ta.value = text
+      ta.style.position = 'fixed'
+      ta.style.opacity = '0'
+      document.body.appendChild(ta)
+      ta.select()
+      document.execCommand('copy')
+      document.body.removeChild(ta)
+      return true
+    } catch {
+      return false
+    }
+  }
+}
+
+function CopyInstallPill({ size, scrollToId }: { size: 'sm' | 'lg'; scrollToId?: string }) {
+  const [copied, setCopied] = useState(false)
+  const timeoutRef = useRef<number | undefined>(undefined)
+
+  useEffect(() => () => window.clearTimeout(timeoutRef.current), [])
+
+  const handleClick = async () => {
+    const ok = await copyToClipboard(INSTALL)
+    if (ok) {
+      setCopied(true)
+      window.clearTimeout(timeoutRef.current)
+      timeoutRef.current = window.setTimeout(() => setCopied(false), 1400)
+    }
+    if (scrollToId) {
+      const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+      document.getElementById(scrollToId)?.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth' })
+    }
+  }
+
+  const base = size === 'lg' ? 'pill meta h-12 px-6' : 'pill meta h-11 px-5'
+  const color = copied ? 'bg-signal text-ground' : 'bg-ink text-ground hover:bg-signal'
+
+  return (
+    <button
+      type="button"
+      onClick={handleClick}
+      aria-label={`Copy install command: ${INSTALL}`}
+      className={`${base} ${color}`}
+    >
+      {INSTALL}
+      <span className="sr-only" role="status">
+        {copied ? 'Command copied to clipboard' : ''}
+      </span>
+    </button>
+  )
 }
 
 export default function App() {
@@ -227,9 +287,6 @@ export default function App() {
             <a href="#spec" className="nav-link meta text-secondary">Spec</a>
             <a href="#install" className="nav-link meta text-secondary">Install</a>
             <a href={GITHUB} target="_blank" rel="noreferrer" className="nav-link meta text-secondary">Github</a>
-            <a href="#install" className="pill meta ml-2 px-4 h-9 bg-ink text-ground hover:bg-signal">
-              {INSTALL}
-            </a>
           </nav>
           <div className="lg:hidden flex items-center gap-2">
             <details className="relative group">
@@ -253,9 +310,6 @@ export default function App() {
                 <a href={GITHUB} target="_blank" rel="noreferrer" className="nav-link meta text-secondary py-1">Github</a>
               </nav>
             </details>
-            <a href="#install" className="pill meta px-3 h-9 bg-ink text-ground">
-              {INSTALL}
-            </a>
           </div>
         </div>
       </header>
@@ -266,7 +320,8 @@ export default function App() {
         className="hero-stage relative bg-stage pt-16"
         style={{ minHeight: 'calc(100svh)' }}
       >
-        <div className="relative z-10 max-w-[1440px] mx-auto px-5 md:px-8 pt-14 md:pt-20 pb-[min(42vw,380px)] md:pb-[min(28vw,320px)] lg:pb-40 w-full lg:w-[54%]">
+        <div className="relative z-10 max-w-[1440px] mx-auto px-5 md:px-8 pt-14 md:pt-20 pb-[min(42vw,380px)] md:pb-[min(28vw,320px)] lg:pb-40 flex">
+        <div className="w-full lg:w-[54%]">
           <p className="meta text-muted reveal reveal-d1">Spotify ⇄ Deezer</p>
           <h1 className="mt-5 font-extrabold text-[clamp(34px,5.1vw,74px)] leading-[0.92] tracking-[-0.045em] text-ink reveal reveal-d2">
             Move your playlist.
@@ -278,9 +333,7 @@ export default function App() {
             no OAuth app. One Deezer ARL cookie is enough. Reverse (Deezer → Spotify) is planned.
           </p>
           <div className="mt-8 flex flex-wrap items-center gap-3 reveal reveal-d4">
-            <a href="#install" className="pill meta h-11 px-5 bg-ink text-ground hover:bg-signal">
-              {INSTALL}
-            </a>
+            <CopyInstallPill size="sm" scrollToId="install" />
             <a
               href="#convert"
               className="pill meta h-11 px-5 border border-[rgba(13,13,15,.18)] bg-stage text-ink hover:border-signal hover:text-signal"
@@ -299,6 +352,7 @@ export default function App() {
               <span className="text-signal">Report</span> — CSV · per-track method
             </p>
           </div>
+        </div>
         </div>
 
         {/* pinned edge metadata */}
@@ -732,17 +786,16 @@ export default function App() {
                 Move everything.
               </h2>
               <p className="mt-5 meta text-muted reveal reveal-d1">
-                Requires Node ≥ 22 and a Deezer ARL cookie —{' '}
-                <a href={DOCS} className="underline hover:text-ink">
-                  grab yours
+                Requires Node ≥ 22 and a Deezer ARL cookie — the login session Deezer stores
+                in your browser once you're signed in.{' '}
+                <a href={ARL_GUIDE} target="_blank" rel="noreferrer" className="underline hover:text-ink">
+                  Grab yours
                 </a>
                 , stored locally, never sent anywhere else. Spotify stays anonymous.
               </p>
             </div>
             <div className="flex flex-wrap gap-3 reveal reveal-d2">
-              <a href={NPM} className="pill meta h-12 px-6 bg-ink text-ground hover:bg-signal">
-                {INSTALL}
-              </a>
+              <CopyInstallPill size="lg" />
               <a
                 href="#convert"
                 className="pill meta h-12 px-6 border border-[rgba(13,13,15,.18)] text-ink hover:border-signal hover:text-signal"
@@ -752,8 +805,35 @@ export default function App() {
             </div>
           </div>
 
+          <details className="mt-10 pt-5 border-t hairline reveal reveal-d2 group">
+            <summary className="meta text-secondary cursor-pointer select-none hover:text-ink flex items-center gap-2 [&::-webkit-details-marker]:hidden">
+              <span className="inline-block transition-transform duration-300 group-open:rotate-90">
+                →
+              </span>
+              New to the command line? Four steps.
+            </summary>
+            <ol className="mt-5 max-w-xl space-y-3 pl-5 list-decimal list-outside text-[14px] md:text-[15px] leading-[1.5] text-secondary font-medium tracking-[-0.01em]">
+              <li>
+                Install{' '}
+                <a href={NODEJS} target="_blank" rel="noreferrer" className="underline hover:text-ink">
+                  Node.js
+                </a>{' '}
+                — version 22 or later.
+              </li>
+              <li>Open Terminal (macOS/Linux) or Command Prompt / PowerShell (Windows).</li>
+              <li>
+                Paste <span className="meta-sm text-ink whitespace-nowrap">{INSTALL}</span> and
+                press Enter.
+              </li>
+              <li>
+                Run <span className="meta-sm text-ink whitespace-nowrap">plx --version</span> —
+                if it prints a version number, the install worked.
+              </li>
+            </ol>
+          </details>
+
           <div className="mt-16 pt-5 border-t hairline flex flex-wrap items-center gap-x-8 gap-y-3 reveal reveal-d3">
-            <a href={GITHUB} className="meta text-muted hover:text-ink transition-colors">Github</a>
+            <a href={GITHUB} target="_blank" rel="noreferrer" className="meta text-muted hover:text-ink transition-colors">Github</a>
             <a href={NPM} className="meta text-muted hover:text-ink transition-colors">Npm</a>
             <a href={DOCS} className="meta text-muted hover:text-ink transition-colors">Docs</a>
             <span className="meta text-muted lg:ml-auto">© plx · local-first · no telemetry</span>
