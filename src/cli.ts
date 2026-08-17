@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { confirm, intro, isCancel, outro, password, select, text } from '@clack/prompts';
-import { loadConfig, saveCredentials, saveRecentUrl, tryAutoFillCredentials, type Config } from './config.js';
+import { credential, loadConfig, saveCredential, saveRecentUrl, tryAutoFillCredentials, type Config } from './config.js';
 import { DeezerClient, resolveDeezerPlaylistId } from './deezer.js';
 import { Conversion } from './conversion.js';
 import { SpotifyProvider, anonymousToken, authenticatedToken, parsePlaylistId, playlistName } from './spotify.js';
@@ -9,19 +9,24 @@ import { HELP_TEXT, parseArgs, type CliOptions } from './args.js';
 
 function args(): string[] { return process.argv.slice(2); }
 
-// Build a validated Deezer client. If no ARL is set, prompt for it and persist.
-// Returns null when the user cancels or the ARL is rejected.
+// Fill one provider's credential: browser auto-fill first, then a manual paste. Persists what it
+// gets. Returns the credential, or null when the user cancels.
+async function ensureCredential(cfg: Config, provider: string, hint: string): Promise<string | null> {
+  if (credential(cfg, provider)) return credential(cfg, provider);
+  const filled = await tryAutoFillCredentials(cfg);
+  if (filled.includes(provider)) return credential(cfg, provider);
+  const entered = await password({ message: hint });
+  if (isCancel(entered) || !entered) return null;
+  await saveCredential(cfg, provider, String(entered));
+  return credential(cfg, provider);
+}
+
+// Build a validated Deezer client. If no credential is set, prompt for it and persist.
+// Returns null when the user cancels or Deezer rejects it.
 async function ensureDeezer(cfg: Config): Promise<DeezerClient | null> {
-  if (!cfg.deezerArl) {
-    const filled = await tryAutoFillCredentials(cfg);
-    if (!filled.includes('deezerArl')) {
-      const arl = await password({ message: `Deezer ARL (${ARL_HINT})` });
-      if (isCancel(arl) || !arl) return null;
-      cfg.deezerArl = String(arl);
-      await saveCredentials({ deezerArl: cfg.deezerArl });
-    }
-  }
-  const deezer = new DeezerClient(cfg.deezerArl);
+  const arl = await ensureCredential(cfg, 'deezer', `Deezer ARL (${ARL_HINT})`);
+  if (!arl) return null;
+  const deezer = new DeezerClient(arl);
   try {
     await deezer.getMe();
   } catch (error) {
@@ -39,7 +44,7 @@ async function chooseSource(cfg: Config): Promise<{ ref: string; token: string |
     ...cfg.recentUrls.map((u) => ({ value: u, label: u })),
     { value: '__new__', label: 'Paste new URL/ID' },
   ];
-  if (cfg.spotifyDc) options.push({ value: '__lib__', label: 'Pick from my Spotify account' });
+  if (credential(cfg, 'spotify')) options.push({ value: '__lib__', label: 'Pick from my Spotify account' });
   const pick = await select({ message: 'Source playlist (Spotify)', options });
   if (isCancel(pick)) return null;
   if (pick === '__new__') {
@@ -131,17 +136,10 @@ async function maybeWrite(conversion: Conversion, name: string, result: Awaited<
 
 // Build a validated Spotify session (sp_dc cookie → authenticated token). Returns token or null.
 async function ensureSpotify(cfg: Config): Promise<string | null> {
-  if (!cfg.spotifyDc) {
-    const filled = await tryAutoFillCredentials(cfg);
-    if (!filled.includes('spotifyDc')) {
-      const dc = await password({ message: `Spotify sp_dc (${SPDC_HINT})` });
-      if (isCancel(dc) || !dc) return null;
-      cfg.spotifyDc = String(dc);
-      await saveCredentials({ spotifyDc: cfg.spotifyDc });
-    }
-  }
+  const dc = await ensureCredential(cfg, 'spotify', `Spotify sp_dc (${SPDC_HINT})`);
+  if (!dc) return null;
   try {
-    return await authenticatedToken(cfg.spotifyDc);
+    return await authenticatedToken(dc);
   } catch (error) {
     console.log(`⚠️ Invalid Spotify sp_dc (${error instanceof Error ? error.message : 'error'}). Re-enter it via Settings.`);
     return null;
@@ -197,17 +195,31 @@ function warnLogin(sites: string): void {
 const ARL_HINT = 'login deezer.com → F12 → Application → Cookies → arl → copy value';
 const SPDC_HINT = 'login open.spotify.com → F12 → Application → Cookies → sp_dc → copy value';
 
+// Settings entry for one provider's credential: unlike ensureCredential this always asks, so a
+// saved-but-expired credential can be replaced.
+async function reenterCredential(cfg: Config, provider: string, site: string, label: string, hint: string): Promise<void> {
+  warnLogin(site);
+  const filled = await tryAutoFillCredentials(cfg);
+  if (!filled.includes(provider)) {
+    const entered = await password({ message: `${label} (${hint})` });
+    if (isCancel(entered) || !entered) return;
+    await saveCredential(cfg, provider, String(entered));
+  }
+  console.log(`✓ ${label} saved.`);
+}
+
 async function runInteractive(options: CliOptions): Promise<void> {
   intro('plx — Spotify ⇄ Deezer');
-  const cfg = await loadConfig(false); // no requirement at menu entry
+  const cfg = await loadConfig();
+  if (cfg.legacyCredentials) console.log('⚠️ Your saved credentials are in an older format and were not carried over. Re-enter them below (or use Auto-fetch) — it only takes one browser dialog.');
   for (;;) {
     const choice = await select({
       message: 'Pick an action',
       options: [
         { value: 'sp2dz', label: 'Spotify → Deezer' },
         { value: 'dz2sp', label: 'Deezer → Spotify' },
-        { value: 'arl', label: `Deezer ARL: ${cfg.deezerArl ? '✓ saved' : '(not set)'}` },
-        { value: 'spdc', label: `Spotify sp_dc: ${cfg.spotifyDc ? '✓ saved' : '(not set)'}` },
+        { value: 'arl', label: `Deezer ARL: ${credential(cfg, 'deezer') ? '✓ saved' : '(not set)'}` },
+        { value: 'spdc', label: `Spotify sp_dc: ${credential(cfg, 'spotify') ? '✓ saved' : '(not set)'}` },
         { value: 'autofetch', label: 'Auto-fetch credentials (from browser)' },
         { value: 'output', label: `Report: ${options.output}` },
         { value: 'quit', label: 'Quit' },
@@ -216,30 +228,8 @@ async function runInteractive(options: CliOptions): Promise<void> {
     if (isCancel(choice) || choice === 'quit') break;
     if (choice === 'sp2dz') { await spotifyToDeezer(cfg, options); continue; }
     if (choice === 'dz2sp') { await deezerToSpotify(cfg, options); continue; }
-    if (choice === 'arl') {
-      warnLogin('Deezer (deezer.com)');
-      const filled = await tryAutoFillCredentials(cfg);
-      if (!filled.includes('deezerArl')) {
-        const arl = await password({ message: `Deezer ARL (${ARL_HINT})` });
-        if (isCancel(arl) || !arl) continue;
-        cfg.deezerArl = String(arl);
-        await saveCredentials({ deezerArl: cfg.deezerArl });
-      }
-      console.log('✓ Deezer ARL saved.');
-      continue;
-    }
-    if (choice === 'spdc') {
-      warnLogin('Spotify (open.spotify.com)');
-      const filled = await tryAutoFillCredentials(cfg);
-      if (!filled.includes('spotifyDc')) {
-        const dc = await password({ message: `Spotify sp_dc (${SPDC_HINT})` });
-        if (isCancel(dc) || !dc) continue;
-        cfg.spotifyDc = String(dc);
-        await saveCredentials({ spotifyDc: cfg.spotifyDc });
-      }
-      console.log('✓ Spotify sp_dc saved.');
-      continue;
-    }
+    if (choice === 'arl') { await reenterCredential(cfg, 'deezer', 'Deezer (deezer.com)', 'Deezer ARL', ARL_HINT); continue; }
+    if (choice === 'spdc') { await reenterCredential(cfg, 'spotify', 'Spotify (open.spotify.com)', 'Spotify sp_dc', SPDC_HINT); continue; }
     if (choice === 'autofetch') {
       warnLogin('Deezer & Spotify');
       const filled = await tryAutoFillCredentials(cfg, true);
@@ -267,9 +257,15 @@ async function main() {
     return;
   }
 
-  const cfg = await loadConfig(true);
-  const deezer = new DeezerClient(cfg.deezerArl);
-  await deezer.getMe();
+  const cfg = await loadConfig();
+  if (cfg.legacyCredentials) console.log('⚠️ Saved credentials are in an older format and were not carried over. Run `plx` and re-enter them (one browser dialog).');
+  // Deezer's search is public, so a dry run into a Deezer target needs no credential at all —
+  // only the write does. Demand it for the side that actually needs one, and not before.
+  const deezer = new DeezerClient(credential(cfg, 'deezer'));
+  if (!options.dryRun) {
+    if (!credential(cfg, 'deezer')) throw new Error('No Deezer credential. Set DEEZER_ARL, or run `plx` and save it from the menu. (A --dry-run needs none.)');
+    await deezer.getMe();
+  }
   const conversion = new Conversion(new SpotifyProvider(await anonymousToken()), deezer, options.output);
 
   for (const raw of options.urls) {

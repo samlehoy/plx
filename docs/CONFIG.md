@@ -47,10 +47,14 @@ automatically when a credential is missing. Manual paste stays as fallback.
 
 Copy `.env.example` to `.env` (or export in shell). Env vars **override** stored credentials.
 
-| Variable | Required | Purpose |
+One variable per provider, each overriding that provider's stored credential. Only the side of the
+conversion that needs a credential is asked for one, so **neither is required in general** — a
+`--dry-run` needs neither, and reading Spotify anonymously needs neither.
+
+| Variable | Needed when | Purpose |
 |---|---|---|
-| `DEEZER_ARL` | for writing to Deezer | Deezer session cookie (see above). |
-| `SPOTIFY_DC` | for writing to Spotify | Spotify web session cookie (needed only when Spotify is the target). |
+| `DEEZER_ARL` | writing to a Deezer target | Deezer session cookie (see above). |
+| `SPOTIFY_DC` | writing to a Spotify target, or reading your private Spotify playlists | Spotify web session cookie. |
 
 ## Config directory
 
@@ -62,6 +66,28 @@ Copy `.env.example` to `.env` (or export in shell). Env vars **override** stored
 | macOS/Linux | `~/.config/plx/credentials.json` (or `$XDG_CONFIG_HOME` if set) |
 
 The file is written with mode `0600` on Unix.
+
+### Storage shape
+
+Credentials are stored as **one opaque string per provider, keyed by provider name**. The config
+layer never parses them — for one provider the string is a single cookie, for another it is a whole
+cookie header, and only the provider that owns it knows which:
+
+```json
+{
+  "credentials": { "deezer": "…", "spotify": "…" },
+  "recentUrls": ["https://open.spotify.com/playlist/…"]
+}
+```
+
+Adding a provider means adding a key, not reshaping the file.
+
+### Upgrading from the older format
+
+Credentials saved in the previous shape (top-level `deezerArl` / `spotifyDc`) are **ignored, not
+migrated** — plx says so plainly on startup and drops them the next time it writes. Re-run
+**Auto-fetch credentials** or paste them once; recovery costs a single browser dialog. Everything
+else in the file, including `recentUrls`, survives untouched.
 
 ## Report output
 

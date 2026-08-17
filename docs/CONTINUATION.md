@@ -4,6 +4,31 @@
 
 Updated: 2026-08-17
 
+## 2026-08-17 (b)
+
+**Provider-keyed credential storage** (issue #4). Unblocks #5 and #6.
+
+- **`credentials.json` now holds one opaque string per provider, keyed by provider name**
+  (`{ credentials: { deezer: "…", spotify: "…" }, recentUrls: [...] }`). `config.ts` never parses a
+  credential — for YouTube Music (#6) the string will be a whole cookie header, and only the provider
+  that owns it knows the format. Adding a provider means adding a key, not reshaping the file.
+- **API**: `loadConfig()` (no arguments now), `credential(cfg, provider)`, `saveCredential(cfg,
+  provider, value)`. `saveCredentials(partial)` is gone.
+- **Env overrides** stay `DEEZER_ARL` / `SPOTIFY_DC`, now via an `ENV_VAR` registry in `config.ts` —
+  one line per provider. Deliberately kept the historical names rather than inventing a generic
+  scheme, so nobody's existing `.env` breaks.
+- **No migration, by design.** The old top-level `deezerArl`/`spotifyDc` keys are ignored, flagged to
+  the user on startup (`cfg.legacyCredentials`), and deleted on the next write. `recentUrls` survives.
+- **Credentials are demanded only by the side that needs one.** `loadConfig(true)`'s "Deezer ARL is
+  mandatory" throw is gone. Verified live: `plx --url … --dry-run` now completes with **no credentials
+  at all** (Deezer's search endpoint is public); the same command without `--dry-run` refuses with a
+  message naming what to set.
+- **`fetchBrowserCredentials()` returns provider-keyed values.** The cookie-shaped parsers
+  (`decryptCookie`, `parseSafariCookies`) are unchanged and so are their tests — the cookie-name →
+  provider-name mapping happens at that one boundary, which is where #6's cookie-header joiner goes.
+- New `tests/config.test.ts` (13 cases): storage shape, env precedence, legacy detection/cleanup,
+  auto-fill precedence, and that a fully-populated config never pops the keychain.
+
 ## 2026-08-17
 
 **One conversion path over a `Provider` interface** (issue #2, the restructure half of #1). No behaviour

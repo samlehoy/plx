@@ -142,10 +142,19 @@ function readSafari(): BrowserCredentials {
   return {};
 }
 
-// Auto-retrieve credentials from the first logged-in browser that has them.
-// Never throws — a missing browser, locked DB, denied keychain, or TCC block
-// just yields {}. Callers persist what's found; manual paste stays the fallback.
-export function fetchBrowserCredentials(): BrowserCredentials {
+// Auto-retrieve credentials from the first logged-in browser that has them, keyed by provider —
+// the parsers above speak in cookie names, and this is where that becomes one opaque string per
+// provider for the config layer to store. Never throws: a missing browser, locked DB, denied
+// keychain, or TCC block just yields {}. Manual paste stays the fallback.
+export function fetchBrowserCredentials(): Record<string, string> {
+  const found = readBrowsers();
+  const credentials: Record<string, string> = {};
+  if (found.arl) credentials.deezer = found.arl;
+  if (found.spDc) credentials.spotify = found.spDc;
+  return credentials;
+}
+
+function readBrowsers(): BrowserCredentials {
   if (platform() !== 'darwin') return {};
   const result: BrowserCredentials = {};
   for (const browser of CHROMIUM_BROWSERS) {

@@ -57,7 +57,7 @@ mock each one's `fetch`.
 |---|---|
 | `src/cli.ts` | Entry. Arg parsing dispatch, interactive menu (`@clack/prompts`), ARL/`sp_dc` prompt + semi-auto fill + persist. |
 | `src/args.ts` | Pure typed CLI parsing → `CliOptions`. No I/O. |
-| `src/config.ts` | Config dir + `credentials.json` read/write (`deezerArl`, `spotifyDc`), `tryAutoFillCredentials`. |
+| `src/config.ts` | Config dir + `credentials.json` read/write. Holds **one opaque string per provider, keyed by provider name** — it never parses a credential's contents. Per-provider env overrides, `tryAutoFillCredentials`. |
 | `src/browser.ts` | Reads `arl`/`sp_dc` from a logged-in browser (Chromium family decrypt + Safari binarycookies parse). macOS only. |
 | `src/spotify.ts` | `SpotifyProvider` + its transport: anonymous token, Pathfinder fetch, embed fallback, `resolveTrackMeta` (match verify), `authenticatedToken(spDc)` (TOTP), search/write/list. |
 | `src/deezer.ts` | `DeezerClient` (a `Provider`): ARL→JWT auth, GraphQL mutations, public search, `reorder`. |
