@@ -16,14 +16,15 @@ The source provider is inferred from the link, so you only name the target.
 
 Options:
   -u, --url <LINK>        playlist URL, URI, or ID (repeatable)
-  -t, --to <PROVIDER>     target provider (required unless --dry-run)
+  -t, --to <PROVIDER>     target provider: spotify | deezer | ytmusic (required)
   -o, --output <file>     CSV report path (default: conversion_report.csv)
   -d, --dry-run           match only; do not create or modify any playlist
   -h, --help              show this help
 
 Examples:
   plx --url https://open.spotify.com/playlist/37i9dQZF1DXcBWIGoYBM5M --to deezer
-  plx --url https://www.deezer.com/playlist/1234567890 --to spotify
+  plx --url https://www.deezer.com/playlist/1234567890 --to ytmusic
+  plx --url https://music.youtube.com/playlist?list=PL... --to spotify
   plx --url https://open.spotify.com/playlist/37i9dQZF1DXcBWIGoYBM5M --to deezer --dry-run
   plx
 `;

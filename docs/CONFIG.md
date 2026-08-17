@@ -5,8 +5,9 @@ Setup guide for credentials, config directory, and storage.
 ## Prerequisites
 
 - **Node.js ≥ 22**
-- **Deezer account** (free is fine) — needed to *write* Deezer playlists.
-- **No Spotify Developer account or app registration** — reading is anonymous; writing needs only a logged-in Spotify web session.
+- An account on whichever services your conversion touches — free tiers are fine.
+- **No developer account, app registration, or API key for any provider.** plx acts as you, using
+  the browser session you already have (ADR 0001).
 
 ## Quick start
 
@@ -19,7 +20,8 @@ Spotify → Deezer reads Spotify anonymously — no Premium, no OAuth.
 
 ## Credentials
 
-`plx` needs at most **two** cookies, both optional depending on direction:
+One browser session credential per provider. **All are optional** — you only need the ones your
+chosen direction actually touches, and a `--dry-run` from a public Spotify playlist needs none:
 
 | Cookie | Env var | Used for | Needed when |
 |---|---|---|---|
@@ -41,16 +43,19 @@ Reading a Spotify playlist for a dry run needs **no credentials**.
 
 1. Log in to [deezer.com](https://www.deezer.com) / [open.spotify.com](https://open.spotify.com) in a browser.
 2. Open DevTools (F12) → **Application** (Chrome/Edge) or **Storage** (Firefox) → **Cookies** → the site domain.
-3. Find `arl` (Deezer) or `sp_dc` (Spotify) and copy its value.
+3. Find `arl` (Deezer) or `sp_dc` (Spotify) and copy its value. For YouTube Music, copy the whole `cookie:` header instead — see above.
 
 ### Semi-auto fill (macOS)
 
-Instead of hand-copying, the `arl` / `sp_dc` inputs can **read the cookie straight
-from a logged-in browser** — you only accept the macOS Keychain "Allow" dialog. It
-works for the **Chromium family** (Brave, Chrome, Edge, Chromium, Vivaldi, Opera)
-and **Safari** (Safari needs **Full Disk Access** in System Settings → Privacy &
-Security). Pick **"Ambil kredensial otomatis"** from the menu, or it runs
-automatically when a credential is missing. Manual paste stays as fallback.
+Instead of hand-copying, plx can **read the credentials straight from a logged-in
+browser** — you only accept the macOS Keychain "Allow" dialog. It works for the
+**Chromium family** (Brave, Chrome, Edge, Chromium, Vivaldi, Opera) and **Safari**
+(Safari needs **Full Disk Access** in System Settings → Privacy & Security). Pick
+**"Auto-fetch credentials (from browser)"** from the menu, or it runs automatically
+when a credential is missing. Manual paste stays the fallback everywhere else.
+
+Each credential it finds is then checked against the live service, so you are told
+whether it actually works rather than just that it was saved.
 
 ## Env vars
 

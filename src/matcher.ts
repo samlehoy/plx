@@ -1,4 +1,4 @@
-import type { Candidate, Match, Track } from './types.js';
+import type { Candidate, Match } from './types.js';
 
 export function normalize(value: string): string {
   return value.normalize('NFKD').replace(/\p{M}/gu, '').toLowerCase().replace(/\(.*?\)/g, '').replace(/[\[(]\s*(feat\.?|ft\.?)\s*/gi, '').replace(/\]/g, '').replace(/[^\p{L}\p{N}_\s]/gu, '').replace(/\s+/g, ' ').trim();
@@ -15,7 +15,6 @@ export function matchCandidates(title: string, artist: string, durationMs: numbe
   for (const c of candidates) { const ct = normalize(c.title); if (na === artistKey(c.artist) && nt && ct && (nt.includes(ct) || ct.includes(nt))) return { id: c.id, title: c.title, artist: c.artist, method: 'fuzzy-title' }; }
   return null;
 }
-export function matchTrack(track: Track, candidates: Candidate[]): Match | null { return matchCandidates(track.name, track.artist, track.durationMs, candidates); }
 
 // Match rules for a music video, used only after the catalog has produced nothing.
 //

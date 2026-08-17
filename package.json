@@ -1,7 +1,7 @@
 {
   "name": "plx-converter",
   "version": "0.1.1",
-  "description": "Spotify ⇄ Deezer playlist converter CLI",
+  "description": "Convert playlists between Spotify, Deezer, and YouTube Music using your own browser session",
   "license": "MIT",
   "type": "module",
   "bin": {
