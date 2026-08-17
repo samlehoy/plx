@@ -4,6 +4,33 @@
 
 Updated: 2026-08-17
 
+## 2026-08-17 (c)
+
+**Source and target provider selection** (issue #5). Unblocks #7 and #8 — with #6, the last gate
+before YouTube Music.
+
+- **New `src/registry.ts`.** A `ProviderSpec` per provider holds everything the CLI needs that is
+  *not* part of converting: label, link hosts, credential label/hint/login site, whether it can read
+  anonymously, ref parsing, playlist-name resolution, and how to build the `Provider` from a
+  credential. **Adding a provider is adding one entry here** — `cli.ts` names no provider anywhere.
+- **The menu no longer grows with providers.** It was `Spotify → Deezer` / `Deezer → Spotify` /
+  `Deezer ARL` / `Spotify sp_dc` — six entries at two providers, eleven at three. Now it is a fixed
+  five: Convert / Credentials / Auto-fetch / Report / Quit. Convert asks source-provider then
+  target-provider (the source is excluded from the target list, so N providers give N×(N−1)
+  directions); Credentials asks which provider first.
+- **Command line: `--to <provider>` is required**, and the source is inferred from the link's host.
+  **This breaks the old `plx --url <spotify-link>` form** that implied a Deezer target — the
+  documented intent of #5. Omitting `--to`, naming an unknown one, giving a link from no known
+  provider, or naming the source as the target each fail with a message that says what to do.
+- **`Provider.listPlaylists` is finally used through the interface** (the account pickers), which was
+  dead code flagged in the #2 review.
+- **`writeReport()` now runs in a `finally`** on both paths, so a failed write no longer discards the
+  whole report — one of the review follow-ups, fixed here because this rewrote both call sites.
+- Verified live: a dry run from a Spotify link into a Deezer target with **no credentials at all**
+  matched 50/50 and wrote the report; every error path checked by hand.
+- New `tests/args.test.ts` (15 cases): flag parsing, host inference, registry lookup, and that the
+  direction count is exactly N×(N−1).
+
 ## 2026-08-17 (b)
 
 **Provider-keyed credential storage** (issue #4). Unblocks #5 and #6.

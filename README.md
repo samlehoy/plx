@@ -17,14 +17,19 @@ Requires Node.js ≥ 22.
 ## Usage
 
 ```bash
-plx                                              # interactive menu (both directions)
-plx --url "https://open.spotify.com/playlist/ID" # Spotify → Deezer
-plx --url "<URL>" --dry-run                      # preview matches without writing
+plx                                                        # interactive menu
+plx --url "https://open.spotify.com/playlist/ID" --to deezer
+plx --url "https://www.deezer.com/playlist/ID" --to spotify
+plx --url "<LINK>" --to deezer --dry-run                   # preview matches without writing
 ```
+
+You name the **target**; the source is inferred from the link, since the link already says which
+service it belongs to. plx never guesses a destination — omitting `--to` is an error.
 
 ```text
 Options:
-  -u, --url <URL|ID>      playlist URL/URI/ID (repeatable)
+  -u, --url <LINK>        playlist URL/URI/ID (repeatable)
+  -t, --to <PROVIDER>     target provider (required)
   -o, --output <file>     CSV report path (default: conversion_report.csv)
   -d, --dry-run           match only, don't write
   -h, --help              show help

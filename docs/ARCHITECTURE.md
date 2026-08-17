@@ -18,6 +18,12 @@ Both directions are supported:
 
 ```
 CLI args (args.ts)  /  interactive menu (cli.ts)
+   │                      pick source provider → pick target provider
+   │                      (non-interactive: --to names the target,
+   │                       the link's host infers the source)
+   │
+   ▼
+registry.ts — ProviderSpec: build each provider from its credential
    │
    ▼
 Conversion(source: Provider, target: Provider)   ← src/conversion.ts
@@ -55,7 +61,8 @@ mock each one's `fetch`.
 
 | File | Responsibility |
 |---|---|
-| `src/cli.ts` | Entry. Arg parsing dispatch, interactive menu (`@clack/prompts`), ARL/`sp_dc` prompt + semi-auto fill + persist. |
+| `src/cli.ts` | Entry. Arg dispatch, interactive menu (`@clack/prompts`), credential prompt + semi-auto fill + persist. Names no provider — it drives off the registry. |
+| `src/registry.ts` | The `ProviderSpec` list: label, link hosts, credential prompt, ref parsing, and how to build each provider. The one place a provider is registered. |
 | `src/args.ts` | Pure typed CLI parsing → `CliOptions`. No I/O. |
 | `src/config.ts` | Config dir + `credentials.json` read/write. Holds **one opaque string per provider, keyed by provider name** — it never parses a credential's contents. Per-provider env overrides, `tryAutoFillCredentials`. |
 | `src/browser.ts` | Reads `arl`/`sp_dc` from a logged-in browser (Chromium family decrypt + Safari binarycookies parse). macOS only. |
