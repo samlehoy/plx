@@ -102,9 +102,9 @@ The project intentionally uses **unofficial web endpoints**. They can change wit
 
 `normalize` strips accents, parentheticals, `(feat./ft.)` labels, punctuation, and collapses whitespace.
 
-## Matching the Python reference
+## Matching reference
 
-The Python implementation (`playlist_converter.py`) is the behavioral reference. Both must produce equivalent reports. When changing matching logic, re-run the Python test and compare reports.
+Matching behavior is pinned by the unit tests in `tests/matcher.test.ts`. When changing matching logic, keep those tests green — they encode the invariants above (tiers, normalization, duration tolerance).
 
 ## Security notes
 

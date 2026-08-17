@@ -11,7 +11,7 @@ type ReverseMatch = { rows: ReportRow[]; matchedUris: string[]; total: number };
 // Match a Deezer playlist's tracks to Spotify track URIs, then resolve each matched
 // URI back to its real Spotify metadata and compare to the source. `verified` counts
 // matches whose resolved title+artist still match the source (precision); a matched
-// URI whose metadata diverges is flagged `note: '⚠️ cek ulang (mungkin salah track)'`.
+// URI whose metadata diverges is flagged `note: '⚠️ recheck (possibly wrong track)'`.
 export async function reverseMatch(deezer: DeezerClient, token: string, sourceId: string, sourceName: string): Promise<ReverseMatch> {
   const tracks = await deezer.getPlaylistTracks(sourceId);
   const rows: ReportRow[] = [];
@@ -26,7 +26,7 @@ export async function reverseMatch(deezer: DeezerClient, token: string, sourceId
         match = matchCandidates(track.name, track.artist, track.durationMs, candidates);
         break;
       } catch (error) {
-        if (attempt === 2) console.log(`  ⚠️ search gagal: ${error instanceof Error ? error.name : 'Error'}`);
+        if (attempt === 2) console.log(`  ⚠️ search failed: ${error instanceof Error ? error.name : 'Error'}`);
         else await sleep(2 ** attempt * 1000);
       }
     }
@@ -35,21 +35,21 @@ export async function reverseMatch(deezer: DeezerClient, token: string, sourceId
       try {
         const meta = await resolveTrackMeta(match.id);
         if (matchCandidates(track.name, track.artist, track.durationMs, [{ id: match.id, title: meta.name, artist: meta.artist, duration: meta.durationMs != null ? Math.round(meta.durationMs / 1000) : null }])) verified += 1;
-        else note = '⚠️ cek ulang (mungkin salah track)';
+        else note = '⚠️ recheck (possibly wrong track)';
       } catch {
-        note = '⚠️ verifikasi gagal';
+        note = '⚠️ verification failed';
       }
       matchedUris.push(match.id);
       rows.push({ playlist: sourceName, title: track.name, artist: track.artist, isrc: null, matched: true, deezer_id: match.id, method: match.method, note });
       console.log(`  [${i + 1}/${tracks.length}] ✓ ${match.method} — ${track.name} — ${track.artist}${note ? ` — ${note}` : ''}`);
     } else {
-      rows.push({ playlist: sourceName, title: track.name, artist: track.artist, isrc: null, matched: false, note: 'tidak ketemu' });
-      console.log(`  [${i + 1}/${tracks.length}] ✗ tidak ditemukan — ${track.name} — ${track.artist}`);
+      rows.push({ playlist: sourceName, title: track.name, artist: track.artist, isrc: null, matched: false, note: 'no match' });
+      console.log(`  [${i + 1}/${tracks.length}] ✗ not found — ${track.name} — ${track.artist}`);
     }
     await sleep(300);
   }
   const missed = tracks.length - matchedUris.length;
-  console.log(`[${sourceName}] ${matchedUris.length}/${tracks.length} cocok (${verified} terverifikasi${missed ? `, ${missed} gagal match` : ''}).`);
+  console.log(`[${sourceName}] ${matchedUris.length}/${tracks.length} matched (${verified} verified${missed ? `, ${missed} match failed` : ''}).`);
   return { rows, matchedUris, total: tracks.length };
 }
 
@@ -59,7 +59,7 @@ export async function reverseConvert(deezer: DeezerClient, token: string, source
   if (matchedUris.length) {
     const uri = await createPlaylist(`[plx] ${sourceName}`, token);
     for (let start = 0; start < matchedUris.length; start += 100) { await addTracks(uri, matchedUris.slice(start, start + 100), token); await sleep(200); }
-    console.log(`[${sourceName}] playlist Spotify dibuat: ${uri} (${matchedUris.length} lagu)`);
+    console.log(`[${sourceName}] Spotify playlist created: ${uri} (${matchedUris.length} tracks)`);
   }
   await writeCsv(output, rows);
 }
@@ -74,6 +74,6 @@ export async function reverseWriteToExisting(deezer: DeezerClient, token: string
   if (toAdd.length) {
     for (let start = 0; start < toAdd.length; start += 100) { await addTracks(targetUri, toAdd.slice(start, start + 100), token); await sleep(200); }
   }
-  console.log(`[${sourceName}] ${toAdd.length} lagu baru ditambahkan (${matchedUris.length - toAdd.length} sudah ada, dilewati).`);
+  console.log(`[${sourceName}] ${toAdd.length} new tracks added (${matchedUris.length - toAdd.length} already present, skipped).`);
   await writeCsv(output, rows);
 }

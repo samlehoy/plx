@@ -18,7 +18,7 @@ Updated: 2026-08-16
 
 - **System design & external contracts** → [`ARCHITECTURE.md`](ARCHITECTURE.md)
 - **Setup, env vars, config dir, storage** → [`CONFIG.md`](CONFIG.md)
-- **Historical Python reference** — `playlist_converter.py` (behavioral reference for matching & reports)
+- **Matching reference** — `tests/matcher.test.ts` (pins the match tiers + normalization invariants)
 
 ## Current state (as of 2026-08-13)
 

@@ -77,7 +77,7 @@ describe('Converter', () => {
     const result = await converter.matchPlaylist(samplePlaylist, false);
     expect(result.matchedIds).toHaveLength(0);
     expect(result.total).toBe(0);
-    expect(converter.rows[0].note).toContain('gagal baca playlist');
+    expect(converter.rows[0].note).toContain('failed to read playlist');
   });
 });
 
@@ -96,7 +96,7 @@ describe('truncation parity', () => {
     const converter = new Converter(deezerFixture(), 'token', 'report.csv');
     const result = await converter.matchPlaylist(samplePlaylist, false);
     expect(result.truncated).toBe(true);
-    expect(converter.rows[0].note).toContain('PERINGATAN: terpotong');
+    expect(converter.rows[0].note).toContain('WARNING: truncated');
   });
 });
 

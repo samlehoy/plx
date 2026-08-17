@@ -87,8 +87,8 @@ export class DeezerClient {
   async addTracks(id: string, trackIds: string[]): Promise<number> {
     const x = await this.gql<{ addTracksToPlaylist: { __typename: string; addedTrackIds?: string[]; isNotAllowed?: boolean } }>('mutation AddTracksToPlaylist($playlistId:String!,$trackIds:[String!]!){addTracksToPlaylist(input:{playlistId:$playlistId,trackIds:$trackIds}){__typename ... on PlaylistAddTracksOutput{addedTrackIds} ... on PlaylistAddTracksError{isNotAllowed}}}', 'AddTracksToPlaylist', { playlistId: id, trackIds });
     const out = x.addTracksToPlaylist;
-    if (out.__typename === 'PlaylistAddTracksError') throw new Error(out.isNotAllowed ? 'Tidak diizinkan mengubah playlist ini (bukan milikmu / hanya di-follow)' : 'Gagal menambah lagu');
-    if (!out.addedTrackIds || out.addedTrackIds.length !== trackIds.length) throw new Error(`Hanya ${out.addedTrackIds?.length ?? 0}/${trackIds.length} lagu yang benar-benar ditambahkan`);
+    if (out.__typename === 'PlaylistAddTracksError') throw new Error(out.isNotAllowed ? 'Not allowed to modify this playlist (not yours / follow-only)' : 'Failed to add tracks');
+    if (!out.addedTrackIds || out.addedTrackIds.length !== trackIds.length) throw new Error(`Only ${out.addedTrackIds?.length ?? 0}/${trackIds.length} tracks were actually added`);
     return out.addedTrackIds.length;
   }
   // The user's own playlists. ponytail: capped at first 50 — personal use, paginate only if someone hits it.

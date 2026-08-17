@@ -47,7 +47,7 @@ describe('reverseConvert', () => {
     expect(added).toEqual([['spotify:track:777']]);
     const csv = await readFile(output, 'utf8');
     expect(csv).toContain('My Playlist,Song One,Artist One,,true,spotify:track:777,exact,');
-    expect(csv).toContain('My Playlist,Song Two,Artist Two,,false,,,tidak ketemu');
+    expect(csv).toContain('My Playlist,Song Two,Artist Two,,false,,,no match');
   });
 
   it('dedupes against existing target tracks and only adds the missing URI', async () => {

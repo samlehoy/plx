@@ -26,7 +26,7 @@ async function ensureDeezer(cfg: Config): Promise<DeezerClient | null> {
   try {
     await deezer.getMe();
   } catch (error) {
-    console.log(`⚠️ ARL Deezer tidak valid (${error instanceof Error ? error.message : 'error'}). Isi ulang lewat Pengaturan.`);
+    console.log(`⚠️ Invalid Deezer ARL (${error instanceof Error ? error.message : 'error'}). Re-enter it via Settings.`);
     return null;
   }
   return deezer;
@@ -38,20 +38,20 @@ async function ensureDeezer(cfg: Config): Promise<DeezerClient | null> {
 async function chooseSource(cfg: Config): Promise<{ ref: string; token: string | null } | null> {
   const options: Array<{ value: string; label: string }> = [
     ...cfg.recentUrls.map((u) => ({ value: u, label: u })),
-    { value: '__new__', label: 'Tempel URL/ID baru' },
+    { value: '__new__', label: 'Paste new URL/ID' },
   ];
-  if (cfg.spotifyDc) options.push({ value: '__lib__', label: 'Pilih dari akun Spotify saya' });
-  const pick = await select({ message: 'Playlist asal (Spotify)', options });
+  if (cfg.spotifyDc) options.push({ value: '__lib__', label: 'Pick from my Spotify account' });
+  const pick = await select({ message: 'Source playlist (Spotify)', options });
   if (isCancel(pick)) return null;
   if (pick === '__new__') {
-    const ref = await text({ message: 'Tempel URL/ID playlist (q untuk kembali)', initialValue: '' });
+    const ref = await text({ message: 'Paste playlist URL/ID (q to go back)', initialValue: '' });
     if (isCancel(ref) || !ref || String(ref).toLowerCase() === 'q') return null;
     return { ref: String(ref), token: null };
   }
   if (pick === '__lib__') {
     const token = await ensureSpotify(cfg);
     if (!token) return null;
-    const uri = await pickSpotifyPlaylist(token, 'asal');
+    const uri = await pickSpotifyPlaylist(token, 'source');
     return uri ? { ref: uri, token } : null;
   }
   return { ref: String(pick), token: null };
@@ -60,23 +60,23 @@ async function chooseSource(cfg: Config): Promise<{ ref: string; token: string |
 // Pick an existing Deezer playlist (as target or source). Returns { id, title } or null.
 async function chooseTarget(deezer: DeezerClient, role: 'target' | 'source' = 'target'): Promise<{ id: string; title: string } | null> {
   const method = await select({
-    message: `Pilih playlist ${role === 'source' ? 'asal' : 'target'} (Deezer)`,
+    message: `Pick ${role === 'source' ? 'source' : 'target'} playlist (Deezer)`,
     options: [
-      { value: 'list', label: 'Daftar dari akun Deezer' },
-      { value: 'paste', label: 'Tempel URL/ID Deezer' },
+      { value: 'list', label: 'List from Deezer account' },
+      { value: 'paste', label: 'Paste Deezer URL/ID' },
     ],
   });
   if (isCancel(method)) return null;
   if (method === 'list') {
     let playlists: { id: string; title: string }[];
     try { playlists = await deezer.listPlaylists(); }
-    catch (error) { console.log(`⚠️ Gagal baca daftar playlist (${error instanceof Error ? error.message : 'error'}).`); return null; }
-    if (!playlists.length) { console.log('Tidak ada playlist Deezer ditemukan di akun ini.'); return null; }
-    const pick = await select({ message: 'Pilih playlist', options: playlists.map((p) => ({ value: p.id, label: p.title })) });
+    catch (error) { console.log(`⚠️ Failed to read playlist list (${error instanceof Error ? error.message : 'error'}).`); return null; }
+    if (!playlists.length) { console.log('No Deezer playlists found on this account.'); return null; }
+    const pick = await select({ message: 'Pick a playlist', options: playlists.map((p) => ({ value: p.id, label: p.title })) });
     if (isCancel(pick)) return null;
     return playlists.find((p) => p.id === pick) ?? null;
   }
-  const ref = await text({ message: 'Tempel URL/ID playlist Deezer', initialValue: '' });
+  const ref = await text({ message: 'Paste Deezer playlist URL/ID', initialValue: '' });
   if (isCancel(ref) || !ref) return null;
   const id = await resolveDeezerPlaylistId(String(ref));
   return { id, title: id };
@@ -85,10 +85,10 @@ async function chooseTarget(deezer: DeezerClient, role: 'target' | 'source' = 't
 // Pick how to write the target: a new playlist or an existing one.
 async function chooseTargetKind(): Promise<'new' | 'existing' | null> {
   const kind = await select({
-    message: 'Target tujuan',
+    message: 'Target destination',
     options: [
-      { value: 'new', label: 'Playlist baru' },
-      { value: 'existing', label: 'Playlist yang sudah ada' },
+      { value: 'new', label: 'New playlist' },
+      { value: 'existing', label: 'Existing playlist' },
     ],
   });
   if (isCancel(kind)) return null;
@@ -122,10 +122,10 @@ async function convert(cfg: Config, options: CliOptions): Promise<void> {
 async function maybeWrite(converter: Converter, name: string, result: Awaited<ReturnType<Converter['matchPlaylist']>>): Promise<void> {
   if (!result.matchedIds.length) return;
   if (result.truncated) {
-    const proceed = await confirm({ message: `Playlist terpotong di 100 lagu. Lanjut dengan ${result.matchedIds.length} lagu?`, initialValue: false });
+    const proceed = await confirm({ message: `Playlist truncated at 100 tracks. Continue with ${result.matchedIds.length} tracks?`, initialValue: false });
     if (isCancel(proceed) || !proceed) return;
   }
-  const ok = await confirm({ message: `Buat '[plx] ${name}' (${result.matchedIds.length} lagu)?`, initialValue: false });
+  const ok = await confirm({ message: `Create '[plx] ${name}' (${result.matchedIds.length} tracks)?`, initialValue: false });
   if (isCancel(ok) || !ok) return;
   await converter.writePlaylist(name, result.matchedIds);
 }
@@ -144,18 +144,18 @@ async function ensureSpotify(cfg: Config): Promise<string | null> {
   try {
     return await authenticatedToken(cfg.spotifyDc);
   } catch (error) {
-    console.log(`⚠️ sp_dc Spotify tidak valid (${error instanceof Error ? error.message : 'error'}). Isi ulang lewat Pengaturan.`);
+    console.log(`⚠️ Invalid Spotify sp_dc (${error instanceof Error ? error.message : 'error'}). Re-enter it via Settings.`);
     return null;
   }
 }
 
 // Pick a Spotify playlist by URI from the user's account (role 'asal' | 'target').
-async function pickSpotifyPlaylist(token: string, role: 'asal' | 'target'): Promise<string | null> {
+async function pickSpotifyPlaylist(token: string, role: 'source' | 'target'): Promise<string | null> {
   let playlists: { uri: string; name: string }[];
   try { playlists = await listPlaylists(token); }
-  catch (error) { console.log(`⚠️ Gagal baca daftar playlist Spotify (${error instanceof Error ? error.message : 'error'}).`); return null; }
-  if (!playlists.length) { console.log('Tidak ada playlist Spotify (yang bisa diubah) ditemukan.'); return null; }
-  const pick = await select({ message: `Pilih playlist ${role} (Spotify)`, options: playlists.map((p) => ({ value: p.uri, label: p.name })) });
+  catch (error) { console.log(`⚠️ Failed to read Spotify playlist list (${error instanceof Error ? error.message : 'error'}).`); return null; }
+  if (!playlists.length) { console.log('No writable Spotify playlists found.'); return null; }
+  const pick = await select({ message: `Pick ${role} playlist (Spotify)`, options: playlists.map((p) => ({ value: p.uri, label: p.name })) });
   if (isCancel(pick)) return null;
   return String(pick);
 }
@@ -183,26 +183,26 @@ async function reverseConvertFlow(cfg: Config, options: CliOptions): Promise<voi
 }
 
 function warnLogin(sites: string): void {
-  console.log(`⚠️ Pastikan sudah login di ${sites} di browser, lalu ambil kredensialnya.`);
+  console.log(`⚠️ Make sure you're logged in at ${sites} in your browser, then grab the credentials.`);
 }
 
-const ARL_HINT = 'login deezer.com → F12 → Application → Cookies → arl → salin value';
-const SPDC_HINT = 'login open.spotify.com → F12 → Application → Cookies → sp_dc → salin value';
+const ARL_HINT = 'login deezer.com → F12 → Application → Cookies → arl → copy value';
+const SPDC_HINT = 'login open.spotify.com → F12 → Application → Cookies → sp_dc → copy value';
 
 async function runInteractive(options: CliOptions): Promise<void> {
   intro('plx — Spotify ⇄ Deezer');
   const cfg = await loadConfig(false); // no requirement at menu entry
   for (;;) {
     const choice = await select({
-      message: 'Pilih aksi',
+      message: 'Pick an action',
       options: [
         { value: 'forward', label: 'Spotify → Deezer' },
         { value: 'reverse', label: 'Deezer → Spotify' },
-        { value: 'arl', label: `Deezer ARL: ${cfg.deezerArl ? '✓ tersimpan' : '(belum diisi)'}` },
-        { value: 'spdc', label: `Spotify sp_dc: ${cfg.spotifyDc ? '✓ tersimpan' : '(belum diisi)'}` },
-        { value: 'autofetch', label: 'Ambil kredensial otomatis (dari browser)' },
-        { value: 'output', label: `Laporan: ${options.output}` },
-        { value: 'quit', label: 'Keluar' },
+        { value: 'arl', label: `Deezer ARL: ${cfg.deezerArl ? '✓ saved' : '(not set)'}` },
+        { value: 'spdc', label: `Spotify sp_dc: ${cfg.spotifyDc ? '✓ saved' : '(not set)'}` },
+        { value: 'autofetch', label: 'Auto-fetch credentials (from browser)' },
+        { value: 'output', label: `Report: ${options.output}` },
+        { value: 'quit', label: 'Quit' },
       ],
     });
     if (isCancel(choice) || choice === 'quit') break;
@@ -217,7 +217,7 @@ async function runInteractive(options: CliOptions): Promise<void> {
         cfg.deezerArl = String(arl);
         await saveCredentials({ deezerArl: cfg.deezerArl });
       }
-      console.log('✓ Deezer ARL tersimpan.');
+      console.log('✓ Deezer ARL saved.');
       continue;
     }
     if (choice === 'spdc') {
@@ -229,25 +229,25 @@ async function runInteractive(options: CliOptions): Promise<void> {
         cfg.spotifyDc = String(dc);
         await saveCredentials({ spotifyDc: cfg.spotifyDc });
       }
-      console.log('✓ Spotify sp_dc tersimpan.');
+      console.log('✓ Spotify sp_dc saved.');
       continue;
     }
     if (choice === 'autofetch') {
       warnLogin('Deezer & Spotify');
       const filled = await tryAutoFillCredentials(cfg, true);
       console.log(filled.length
-        ? `✓ Terambil dari browser: ${filled.join(', ')}.`
-        : '✗ Tidak ada kredensial yang bisa diambil (browser belum login / keychain ditolak).');
+        ? `✓ Fetched from browser: ${filled.join(', ')}.`
+        : '✗ No credentials could be fetched (browser not logged in / keychain denied).');
       continue;
     }
     if (choice === 'output') {
-      const output = await text({ message: 'Path file laporan', initialValue: options.output });
+      const output = await text({ message: 'Report file path', initialValue: options.output });
       if (isCancel(output) || !output) continue;
       options.output = String(output);
       continue;
     }
   }
-  outro(`Selesai. Laporan: ${options.output}`);
+  outro(`Done. Report: ${options.output}`);
 }
 
 async function main() {

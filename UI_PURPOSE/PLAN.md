@@ -1,38 +1,63 @@
-# Plan — plx landing page
+# Plan — plx landing page (final)
 
-Landing page untuk `plx`, diambil dari Superdesign draft `81bec207-c177-436d-a19f-90cfdf9138b0`
-(v2). Keputusan hosting: **track file saja** di repo, host eksternal menyusul.
+Landing page untuk `plx-converter` (bin `plx`), di-rebuild dari Superdesign draft
+`81bec207-c177-436d-a19f-90cfdf9138b0` (v2, sudah di-fetch → `UI_PURPOSE/frontend-landingpage.html`
+sebagai referensi visual + JS).
 
-## Sudah dikerjakan (sesi ini)
+## Keputusan (grilling — settled)
 
-- Fetch design via Superdesign CLI → `UI_PURPOSE/frontend-landingpage.html` (43 KB,
-  self-contained: Tailwind CDN + Iconify CDN + Google Fonts). Tujuh section, occlusion
-  weave, counter-travel record stage, match-tier picker, dan semua JS (chart, pipeline
-  draw, scroll choreography) sudah utuh.
+| Keputusan | Hasil |
+|---|---|
+| Framework | React + Vite (bukan single HTML statis) |
+| Lokasi | `web/` standalone package (bukan monorepo) |
+| Bahasa | TypeScript |
+| Styling | Tailwind v4 + `@tailwindcss/vite`, token di `@theme` |
+| Font | self-host `@fontsource/archivo` + `@fontsource/ibm-plex-mono` |
+| Aset vinyl | self-host `UI_PURPOSE/vinyl.png` (keyed cut-out tidak perlu) |
+| Hosting | track file saja; deploy menyusul |
 
-## Langkah
+## Aset vinyl — RESOLVED
 
-1. **Pindah ke lokasi kanonik** — `UI_PURPOSE/frontend-landingpage.html` → `site/index.html`
-   (repo ini package npm CLI tanpa static dir; `site/` jadi rumah landing yang jelas).
-2. **Fix versi** — meta pinned hero `v0.4.2 · cli` → `0.1.0` (selaras `package.json`).
-3. **Fix footer link** — Github/Npm/Docs masih `href="#"`:
-   - Github → `https://github.com/samlehoy/plx`
-   - Npm → `https://www.npmjs.com/package/plx`
-   - Docs → `https://github.com/samlehoy/plx/tree/master/docs`
-4. **Reverse framing — tanpa perubahan.** Kalimat `Reverse (Deezer → Spotify) is planned.`
-   sengaja dipertahankan sesuai `prompt-2.txt` (jangan tampil sebagai shipped), walau
-   docs mencatat reverse sudah jalan.
-5. **Tanpa perubahan** `package.json` / workflow CI (keputusan "track file saja").
+`UI_PURPOSE/vinyl.png`: 2500×2500, `hasAlpha: yes`, black vinyl disc di background transparan.
+Ideal untuk occlusion weave (square + alpha, tanpa keying). Catatan: file **8-bit colormap**
+(palette PNG); kalau palette-alpha bermasalah saat render, konversi ke 8-bit RGBA sekali di waktu
+implementasi.
 
-## Verifikasi / item susulan
+## Copy / positioning (binding — dari prompt-2.txt)
 
-- **Aset vinyl** — hotlink eksternal (Shopify CDN), bukan keyed cut-out dari spec
-  `Hero record artwork`. Perlu dicek transparansinya; kalau background putih, hero
-  occlusion weave rusak. Bila iya: ganti dengan aset keyed yang di-self-host.
-- Buka `site/index.html` di browser: cek occlusion weave, sticky stage, tier picker,
-  dan `prefers-reduced-motion` (no-JS render harus tetap utuh).
+- Eyebrow `SPOTIFY ⇄ DEEZER`, headline accent `No dev account.`, lede "browser sessions, not API keys".
+- Reverse (Deezer → Spotify) HANYA tampil sebagai "planned"/"soon" — tidak pernah shipped
+  (codebase sudah implement, tapi landing jangan bilang shipped).
+- Jangan ubah: 7 section, palet achromatic + 1 accent, Archivo/IBM Plex Mono, occlusion weave /
+  counter-travel / tier-picker.
 
-## Di luar scope
+## Identitas npm (fix dari stale)
 
-- Deploy/hosting (Pages, Vercel, dll) — user host sendiri nanti.
-- Lokalisasi.
+- Package: `plx-converter@0.1.1` (bin tetap `plx`).
+- Install: `npm i -g plx-converter` — **bukan** `npm i -g plx` (itu package orang lain).
+- Versi hero pinned: `0.1.1 · cli` (bukan `v0.4.2`).
+- Footer links:
+  - Github → `https://github.com/samlehoy/plx`
+  - Npm → `https://www.npmjs.com/package/plx-converter`
+  - Docs → `https://github.com/samlehoy/plx/tree/master/docs`
+
+## Langkah implementasi (belum dieksekusi)
+
+1. Scaffold `web/` — Vite + React + TypeScript.
+2. Tailwind v4 + plugin; token palet/font/easing di `@theme`.
+3. Font via `@fontsource/archivo` + `@fontsource/ibm-plex-mono`.
+4. Salin `UI_PURPOSE/vinyl.png` → `web/public/vinyl.png`; konversi RGBA8 bila perlu.
+5. Port 7 section + 3 signature component (occlusion weave, counter-travel stage, tier picker)
+   + scroll choreography (IntersectionObserver, rAF, `prefers-reduced-motion` gating).
+6. Terapkan identitas npm di atas pada semua titik copy (nav pill, hero buttons, spec table,
+   close button, footer).
+
+## Verifikasi
+
+- Dev server: occlusion weave (vinyl di z-2), sticky stage, tier picker, `prefers-reduced-motion`
+  (no-JS render utuh).
+- Pastikan setiap titik install berbunyi `npm i -g plx-converter` dan versi `0.1.1`.
+
+## Out of scope
+
+- Deploy/hosting, lokalisasi, reverse-flow sebagai fitur shipped.
