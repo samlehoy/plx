@@ -69,7 +69,9 @@ describe('Conversion', () => {
     expect(result.truncated).toBe(false);
     expect(converter.rows).toHaveLength(1);
     expect(converter.rows[0].matched).toBe(true);
-    expect(converter.rows[0].deezer_id).toBe('42');
+    expect(converter.rows[0].target_id).toBe('42');
+    expect(converter.rows[0].source).toBe('Spotify');
+    expect(converter.rows[0].target).toBe('Deezer');
     expect(converter.rows[0].method).toBe('exact');
     expect(converter.rows[0].note).toBe('dry-run');
   });
@@ -188,10 +190,11 @@ describe('CSV quoting', () => {
   it('quotes fields containing commas and quotes', async () => {
     const dir = await mkdtemp(join(tmpdir(), 'plx-'));
     const path = join(dir, 'out.csv');
-    await writeCsv(path, [{ playlist: 'A, B', title: 'Song "X"', artist: 'Artist', isrc: null, matched: true, deezer_id: '123', method: 'exact', note: 'ok' }]);
+    await writeCsv(path, [{ playlist: 'A, B', title: 'Song "X"', artist: 'Artist', isrc: null, matched: true, target_id: '123', method: 'exact', note: 'ok', source: 'Spotify', target: 'Deezer' }]);
     const content = await readFile(path, 'utf8');
     expect(content).toContain('"A, B"');
     expect(content).toContain('"Song ""X"""');
     expect(content).toContain(',123,exact,ok');
+    expect(content.split('\n')[0]).toBe('playlist,source,target,title,artist,isrc,matched,target_id,method,note');
   });
 });

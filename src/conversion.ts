@@ -15,7 +15,9 @@ const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 export class Conversion {
   readonly rows: ReportRow[] = [];
   constructor(private readonly source: Provider, private readonly target: Provider, private readonly output: string) {}
-  private record(row: ReportRow) { this.rows.push(row); }
+  // Every row carries the direction that produced it, so the file still makes sense a month later
+  // and a report from one of six directions is not mistaken for another.
+  private record(row: ReportRow) { this.rows.push({ ...row, source: this.source.name, target: this.target.name }); }
 
   async matchPlaylist(playlist: PlaylistRef, dryRun = false): Promise<MatchResult> {
     let result;
@@ -39,7 +41,7 @@ export class Conversion {
         const flag = await this.verify(track, match);
         if (this.target.resolveTrack && flag === null) verified += 1;
         matchedIds.push(match.id);
-        this.record({ playlist: playlist.name, title: track.name, artist: track.artist, isrc: null, matched: true, deezer_id: match.id, method: match.method, note: [flag, dryRun ? 'dry-run' : null].filter(Boolean).join('; ') || null });
+        this.record({ playlist: playlist.name, title: track.name, artist: track.artist, isrc: null, matched: true, target_id: match.id, method: match.method, note: [flag, dryRun ? 'dry-run' : null].filter(Boolean).join('; ') || null });
         console.log(`  [${i + 1}/${result.tracks.length}] ✓ ${match.method} — ${track.name} — ${track.artist}${flag ? ` — ${flag}` : ''}`);
       } else {
         this.record({ playlist: playlist.name, title: track.name, artist: track.artist, isrc: null, matched: false, note: dryRun ? 'dry-run: no match' : 'no match' });

@@ -3,7 +3,7 @@ export type Candidate = { id: string; title: string; artist: string; duration?: 
 export type Match = { id: string; title: string; artist: string; method: MatchMethod };
 export type MatchMethod = 'exact' | 'fuzzy-duration' | 'fuzzy-title';
 export type PlaylistRef = { name: string; uri: string };
-export type ReportRow = { playlist: string; title: string; artist: string; isrc: string | null; matched: boolean; deezer_id?: string | null; method?: string | null; note?: string | null };
+export type ReportRow = { playlist: string; source?: string; target?: string; title: string; artist: string; isrc: string | null; matched: boolean; target_id?: string | null; method?: string | null; note?: string | null };
 export type MatchResult = { matchedIds: string[]; total: number; truncated: boolean };
 
 // A music service plx can both read playlists from and write playlists to. Every provider is a

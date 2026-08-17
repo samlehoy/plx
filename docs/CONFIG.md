@@ -101,7 +101,9 @@ else in the file, including `recentUrls`, survives untouched.
 
 ## Report output
 
-Default CSV report path is `conversion_report.csv`. Override with `--output <file>` or the interactive menu's **Laporan** option.
+Default CSV report path is `conversion_report.csv`. Override with `--output <file>` or the interactive menu's **Report** option.
+
+Columns: `playlist,source,target,title,artist,isrc,matched,target_id,method,note`. `source` and `target` name the providers, and `target_id` is the matched identifier in the target's own terms — the same meaning in all six directions.
 
 ## Security
 

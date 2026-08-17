@@ -54,8 +54,8 @@ describe('conversion into a Spotify target', () => {
     expect(created).toContain('spclient.wg.spotify.com');
     expect(added).toEqual([['spotify:track:777']]);
     const csv = await readFile(output, 'utf8');
-    expect(csv).toContain('My Playlist,Song One,Artist One,,true,spotify:track:777,exact,');
-    expect(csv).toContain('My Playlist,Song Two,Artist Two,,false,,,no match');
+    expect(csv).toContain('My Playlist,Deezer,Spotify,Song One,Artist One,,true,spotify:track:777,exact,');
+    expect(csv).toContain('My Playlist,Deezer,Spotify,Song Two,Artist Two,,false,,,no match');
   });
 
   // The target can resolve a track by identifier, so every match is re-resolved and re-checked
