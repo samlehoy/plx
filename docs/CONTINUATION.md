@@ -2,7 +2,33 @@
 
 **Handoff log for the next session.** This file tracks what changed and what's left. For *how the system works* read `ARCHITECTURE.md`; for *setup/credentials* read `CONFIG.md`.
 
-Updated: 2026-08-16
+Updated: 2026-08-17
+
+## 2026-08-17
+
+**One conversion path over a `Provider` interface** (issue #2, the restructure half of #1). No behaviour
+change and no new external endpoint — the endpoint set is byte-identical to before.
+
+- **`Provider`** (`src/types.ts`) is now the unit of extension: `readPlaylist`, `search`,
+  `createPlaylist`, `addTracks`, `getPlaylistTrackIds`, `listPlaylists`, plus two **optional**
+  capabilities, `reorder` and `resolveTrack` (ADR 0002). A fourth provider means implementing this
+  and nothing else.
+- **`src/converter.ts` and `src/reverse.ts` are gone**, replaced by `src/conversion.ts` — one
+  `Conversion(source, target, output)` that serves both directions. The forward/reverse vocabulary is
+  retired everywhere, module and function names included (`convert`/`reverseConvertFlow` →
+  `spotifyToDeezer`/`deezerToSpotify` in `cli.ts`).
+- **Capabilities in practice.** Deezer implements `reorder` (by track id — `moveTrack` and the
+  order-sync loop moved out of `Converter` and into `DeezerClient.reorder`, returning whether it
+  moved anything so the caller can log). Spotify implements `resolveTrack` instead, so every match
+  into a Spotify target is verified exactly as `reverseMatch` used to do, and a Spotify target
+  degrades to dedupe-and-append rather than failing.
+- **`DeezerCandidate` → `Candidate`** (the prefactor rename). `deezer_id` in the CSV is *not* renamed
+  — that is issue #3.
+- **Tests.** `tests/converter.test.ts` + `tests/reverse.test.ts` → `tests/conversion.test.ts` +
+  `tests/conversion-into-spotify.test.ts`. Every original assertion is unchanged; only the way each
+  test constructs its subject changed — tests now pass providers in directly instead of reaching into
+  a private `converter['deezer']` field. One test added for the capability gap (a target with no
+  `reorder` still completes the write). 23 → 24 tests, all green.
 
 ## 2026-08-16
 

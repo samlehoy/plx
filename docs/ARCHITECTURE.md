@@ -17,29 +17,39 @@ Both directions are supported:
 ## Flow
 
 ```
-CLI args (args.ts)
-   │
-   ├─ --url ──────────►  read playlist from Spotify
-   │                     (Pathfinder → embed fallback)
-   │                              │
-   │                              ▼
-   │                     match each track via Deezer search
-   │                              │
-   │                              ▼
-   │                     matchedIds
-   │                              │
-   └─ interactive menu (cli.ts) ──┘
+CLI args (args.ts)  /  interactive menu (cli.ts)
    │
    ▼
-write Deezer playlist (GraphQL)   +   write CSV report (csv.ts)
+Conversion(source: Provider, target: Provider)   ← src/conversion.ts
+   │
+   ├─ source.readPlaylist()  ────────────►  Track[]
+   │
+   ├─ target.search(track)   ────────────►  Match | null   (provider owns the strategy, ADR 0003)
+   │
+   ├─ target.resolveTrack?(id)  ─────────►  verify the match, flag it if it diverges
+   │
+   ▼
+target.createPlaylist / addTracks   +   target.reorder?()   +   CSV report (csv.ts)
 ```
 
-Three decoupled halves:
-- **Read** (Spotify) — `src/spotify.ts`. Produces `Track[] { name, artist, durationMs }`. Anonymous (no auth) for the forward flow.
-- **Match & Write** (Deezer) — `src/converter.ts` + `src/deezer.ts`. Matches to Deezer track ids, creates playlists, writes the CSV report.
-- **Reverse** (Deezer → Spotify) — `src/reverse.ts`. Reads a Deezer playlist, matches to Spotify URIs, writes via a `sp_dc`-minted token.
+One conversion path, both providers as parameters — N providers give N×(N−1) directions with no
+direction-specific code. The pieces:
 
-They meet only in `Converter` (`src/converter.ts`) and `reverse.ts`, which is why the parity tests mock each half's `fetch`.
+- **`Provider`** (`src/types.ts`) — the interface every provider implements. Its optional members
+  (`reorder`, `resolveTrack`) are **capabilities**: a conversion whose target lacks one degrades
+  quietly rather than failing (ADR 0002).
+- **`Conversion`** (`src/conversion.ts`) — read → match → verify → report, plus the two write modes
+  (new playlist / dedupe-and-append into an existing one). Knows no provider by name.
+- **Providers** — `SpotifyProvider` (`src/spotify.ts`) and `DeezerClient` (`src/deezer.ts`). Each owns
+  its own search strategy and its own transport; the shared matcher owns the match rules (ADR 0003).
+
+Providers meet only in `Conversion`, which is why the conversion tests supply providers directly and
+mock each one's `fetch`.
+
+| Capability | Spotify | Deezer |
+|---|---|---|
+| `reorder` | ✗ — no move primitive in the endpoints plx uses; a Spotify target is dedupe-and-append | ✓ by track id |
+| `resolveTrack` | ✓ — every match into a Spotify target is verified | ✗ — matches into Deezer are unverified |
 
 ## Module map
 
@@ -49,13 +59,12 @@ They meet only in `Converter` (`src/converter.ts`) and `reverse.ts`, which is wh
 | `src/args.ts` | Pure typed CLI parsing → `CliOptions`. No I/O. |
 | `src/config.ts` | Config dir + `credentials.json` read/write (`deezerArl`, `spotifyDc`), `tryAutoFillCredentials`. |
 | `src/browser.ts` | Reads `arl`/`sp_dc` from a logged-in browser (Chromium family decrypt + Safari binarycookies parse). macOS only. |
-| `src/spotify.ts` | Anonymous token, Pathfinder fetch, embed fallback, `resolveTrackMeta` (reverse verify), and `authenticatedToken(spDc)` (TOTP) + search/write/list for the reverse flow. |
-| `src/deezer.ts` | ARL→JWT auth, GraphQL mutations, public search. |
-| `src/reverse.ts` | Deezer → Spotify orchestration: `reverseMatch` (match + verify precision), `reverseConvert`, `reverseWriteToExisting`. |
-| `src/converter.ts` | Orchestrates read → match → report; retry; CSV rows. |
+| `src/spotify.ts` | `SpotifyProvider` + its transport: anonymous token, Pathfinder fetch, embed fallback, `resolveTrackMeta` (match verify), `authenticatedToken(spDc)` (TOTP), search/write/list. |
+| `src/deezer.ts` | `DeezerClient` (a `Provider`): ARL→JWT auth, GraphQL mutations, public search, `reorder`. |
+| `src/conversion.ts` | The one conversion path. Orchestrates read → match → verify → report; retry; write modes; CSV rows. Provider-agnostic. |
 | `src/matcher.ts` | Pure normalization + tiered matching. No I/O. |
 | `src/csv.ts` | CSV escaping/writing. |
-| `src/types.ts` | Domain types. |
+| `src/types.ts` | Domain types, including the `Provider` interface. |
 | `src/http.ts` | fetch helpers: timeout, JSON, retry, browser UA. |
 
 ## External contracts (unofficial — fragile)
@@ -70,7 +79,7 @@ The project intentionally uses **unofficial web endpoints**. They can change wit
 | Authenticated token | `GET https://open.spotify.com/api/token?reason=transport&productType=web-player&totp=<otp>&totpServer=<otp>&totpVer=<v>` with `Cookie: sp_dc=…` (TOTP = HMAC-SHA1 over the rotating "nuance" secret + `/api/server-time`) | Full search+write scope; the embed token is read-only and must NOT be used for writes | — |
 | Playlist tracks (full) | `https://api-partner.spotify.com/pathfinder/v1/query` — persisted query `fetchPlaylist` | **The `sha256Hash` rotates periodically.** If you see `PersistedQueryNotFound`, grab a fresh hash from the web player's DevTools Network tab. | `FETCH_PLAYLIST_SHA` |
 | Playlist tracks (fallback) | `https://open.spotify.com/embed/playlist/{id}` → `trackList` | Capped at **100** tracks (`EMBED_TRACK_LIMIT`). Used only when Pathfinder fails. | `EMBED_TRACK_LIMIT` |
-| Track metadata (reverse verify) | `https://open.spotify.com/embed/track/{id}` → `__NEXT_DATA__` → `entity.name` / `artists[0].name` / `duration` (ms) | Anonymous; used by `resolveTrackMeta` to verify reverse-flow matches (precision). Primary artist + duration only — not full multi-artist metadata. | — |
+| Track metadata (match verify) | `https://open.spotify.com/embed/track/{id}` → `__NEXT_DATA__` → `entity.name` / `artists[0].name` / `duration` (ms) | Anonymous; backs `SpotifyProvider.resolveTrack`, which verifies every match into a Spotify target (precision). Primary artist + duration only — not full multi-artist metadata. | — |
 | Search tracks | Pathfinder **v2** `POST /pathfinder/v2/query`, `operationName: "searchTracks"` | Hash rotates (see above) | `SEARCH_TRACKS_SHA` |
 | Create playlist | REST `POST https://spclient.wg.spotify.com/playlist/v2/playlist?format=json` | No persisted-query hash. Creates the playlist but does **not** attach it to the account — must be followed by `addItemsToRootlist`, else it never shows in the library. | — |
 | Add to library/rootlist | Pathfinder **v2**, `operationName: "addItemsToRootlist"`, `{ uris: [playlistUri] }` | Hash rotates | `ADD_ITEMS_TO_ROOTLIST_SHA` |
@@ -89,8 +98,8 @@ The project intentionally uses **unofficial web endpoints**. They can change wit
 
 1. **Duration unit conversion** — Spotify reports milliseconds, Deezer seconds. `matchDurationMs` compares `spotifyMs` vs `deezerSec * 1000`. Comparing raw units rejects every correct match.
 2. **Free-text Deezer search** — `searchQuery` uses free words (`"artist title"`), NOT `artist:"..." track:"..."` field syntax. Measured on real playlists: field syntax matched 9/19 tracks, free text 19/19.
-3. **Embed fallback truncation** — when `result.truncated`, a report row `PERINGATAN: terpotong di 100 lagu` is recorded. This matches the Python reference.
-4. **No Spotify Developer account / OAuth** — reading is anonymous; the reverse flow uses a personal `sp_dc` web-session cookie (minted to a token via TOTP), never an official Client ID/Secret or OAuth.
+3. **Truncated source read** — when a provider's `readPlaylist` reports `truncated`, a `WARNING: truncated at N tracks` report row is recorded. Today only Spotify's embed fallback truncates (at `EMBED_TRACK_LIMIT`), but the conversion path stays provider-agnostic: it reports the count it actually read, not any one provider's cap.
+4. **No Spotify Developer account / OAuth** — reading is anonymous; writing into a Spotify target uses a personal `sp_dc` web-session cookie (minted to a token via TOTP), never an official Client ID/Secret or OAuth.
 
 ## Matching tiers (`matcher.ts`)
 

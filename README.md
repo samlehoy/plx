@@ -35,7 +35,7 @@ Options:
 | Cookie | Env var | Needed for |
 |---|---|---|
 | Deezer `arl` | `DEEZER_ARL` | writing to Deezer |
-| Spotify `sp_dc` | `SPOTIFY_DC` | writing to Spotify (reverse flow) |
+| Spotify `sp_dc` | `SPOTIFY_DC` | writing to a Spotify target |
 
 Set in `.env`, or paste when prompted. Reading a Spotify playlist needs **no credentials**. Full setup: [`docs/CONFIG.md`](docs/CONFIG.md).
 

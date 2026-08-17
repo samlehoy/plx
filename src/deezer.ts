@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { fetchJson, retry } from './http.js';
 import { firstArtist, matchCandidates, searchQuery, stripFeat } from './matcher.js';
-import type { Match, Track } from './types.js';
+import type { Match, Provider, Track } from './types.js';
 
 const gqlSchema = z.object({ errors: z.array(z.object({ message: z.string() })).optional(), data: z.unknown() });
 
@@ -34,7 +34,8 @@ function jwtExpiryMs(jwt: string): number {
   } catch { return Date.now() + 3600_000; }
 }
 
-export class DeezerClient {
+export class DeezerClient implements Provider {
+  readonly name = 'Deezer';
   private jwt?: string;
   private jwtExpiresAt = 0;
   constructor(private readonly arl: string) {}
@@ -111,19 +112,37 @@ export class DeezerClient {
       after = data.playlist.tracks.pageInfo.endCursor;
     }
   }
-  // Full track metadata (title/artist/duration) in playlist order — source read for the reverse flow.
-  async getPlaylistTracks(playlistId: string): Promise<Track[]> {
+  // Full track metadata (title/artist/duration) in playlist order — the source read.
+  // Deezer paginates the whole playlist, so a read is never truncated.
+  async readPlaylist(playlistId: string): Promise<{ tracks: Track[]; truncated: boolean }> {
     const tracks: Track[] = [];
     let after: string | null = null;
     for (;;) {
       const data: { playlist: { tracks: { edges: Array<{ node: { id: string; title: string; duration: number; contributorNames: string[] } }>; pageInfo: { hasNextPage: boolean; endCursor: string | null } } } } = await this.gql('query GetPlaylistTracks($playlistId:String!,$first:Int=50,$after:String){playlist(playlistId:$playlistId){tracks(first:$first,after:$after){edges{node{id title duration contributorNames}} pageInfo{hasNextPage endCursor}}}}', 'GetPlaylistTracks', { playlistId, first: 50, after });
       for (const e of data.playlist.tracks.edges) tracks.push({ name: e.node.title, artist: e.node.contributorNames[0] ?? '', durationMs: e.node.duration * 1000 });
-      if (!data.playlist.tracks.pageInfo.hasNextPage || !data.playlist.tracks.pageInfo.endCursor) return tracks;
+      if (!data.playlist.tracks.pageInfo.hasNextPage || !data.playlist.tracks.pageInfo.endCursor) return { tracks, truncated: false };
       after = data.playlist.tracks.pageInfo.endCursor;
     }
   }
   // Move a track to be after `afterTrackId` (null = move to front).
   async moveTrack(playlistId: string, trackId: string, afterTrackId: string | null): Promise<void> {
     await this.gql('mutation MoveTrackInPlaylist($playlistId:String!,$trackId:String!,$afterTrackId:String){moveTrackInPlaylist(input:{playlistId:$playlistId,trackId:$trackId,afterTrackId:$afterTrackId}){__typename}}', 'MoveTrackInPlaylist', { playlistId, trackId, afterTrackId });
+  }
+  // Reorder capability (ADR 0002). Moves each desired track into place from the front, so the
+  // matched tracks end up in source order. Deezer moves by track id, so no per-item handle is needed.
+  // Skips when the matched tracks are already in *relative* order: tracks already in the target that
+  // aren't in `trackIds` keep their positions and may stay interleaved. Resolves true if it moved.
+  async reorder(playlistId: string, trackIds: string[]): Promise<boolean> {
+    const desired = [...new Set(trackIds)].filter((id) => id);
+    if (desired.length < 2) return false;
+    const current = await this.getPlaylistTrackOrder(playlistId);
+    const movable = new Set(desired);
+    const kept = current.filter((id) => movable.has(id));
+    if (kept.length === desired.length && desired.every((id, i) => kept[i] === id)) return false;
+    for (let i = 0; i < desired.length; i += 1) {
+      await this.moveTrack(playlistId, desired[i], i === 0 ? null : desired[i - 1]);
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+    return true;
   }
 }

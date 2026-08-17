@@ -2,9 +2,8 @@
 import { confirm, intro, isCancel, outro, password, select, text } from '@clack/prompts';
 import { loadConfig, saveCredentials, saveRecentUrl, tryAutoFillCredentials, type Config } from './config.js';
 import { DeezerClient, resolveDeezerPlaylistId } from './deezer.js';
-import { Converter } from './converter.js';
-import { anonymousToken, authenticatedToken, parsePlaylistId, playlistName } from './spotify.js';
-import { reverseConvert, reverseWriteToExisting } from './reverse.js';
+import { Conversion } from './conversion.js';
+import { SpotifyProvider, anonymousToken, authenticatedToken, parsePlaylistId, playlistName } from './spotify.js';
 import { listPlaylists } from './spotify.js';
 import { HELP_TEXT, parseArgs, type CliOptions } from './args.js';
 
@@ -95,39 +94,39 @@ async function chooseTargetKind(): Promise<'new' | 'existing' | null> {
   return kind as 'new' | 'existing';
 }
 
-// Core convert: read source, match, then write to a new playlist or an existing target.
-async function convert(cfg: Config, options: CliOptions): Promise<void> {
+// Spotify source → Deezer target: read source, match, then write to a new playlist or an existing target.
+async function spotifyToDeezer(cfg: Config, options: CliOptions): Promise<void> {
   const source = await chooseSource(cfg);
   if (!source) return;
   const deezer = await ensureDeezer(cfg);
   if (!deezer) return;
   const id = parsePlaylistId(source.ref);
   const name = await playlistName(id);
-  const converter = new Converter(deezer, source.token ?? await anonymousToken(), options.output);
-  const result = await converter.matchPlaylist({ name, uri: id }, options.dryRun);
+  const conversion = new Conversion(new SpotifyProvider(source.token ?? await anonymousToken()), deezer, options.output);
+  const result = await conversion.matchPlaylist({ name, uri: id }, options.dryRun);
 
   if (!options.dryRun && result.matchedIds.length) {
     const kind = await chooseTargetKind();
     if (kind === 'existing') {
       const target = await chooseTarget(deezer);
-      if (target) await converter.writeToExisting(name, target.id, result.matchedIds);
+      if (target) await conversion.writeToExisting(name, target.id, result.matchedIds);
     } else if (kind === 'new') {
-      await maybeWrite(converter, name, result);
+      await maybeWrite(conversion, name, result);
     }
   }
-  await converter.writeReport();
+  await conversion.writeReport();
   await saveRecentUrl(source.ref);
 }
 
-async function maybeWrite(converter: Converter, name: string, result: Awaited<ReturnType<Converter['matchPlaylist']>>): Promise<void> {
+async function maybeWrite(conversion: Conversion, name: string, result: Awaited<ReturnType<Conversion['matchPlaylist']>>): Promise<void> {
   if (!result.matchedIds.length) return;
   if (result.truncated) {
-    const proceed = await confirm({ message: `Playlist truncated at 100 tracks. Continue with ${result.matchedIds.length} tracks?`, initialValue: false });
+    const proceed = await confirm({ message: `Playlist truncated at ${result.total} tracks. Continue with ${result.matchedIds.length} tracks?`, initialValue: false });
     if (isCancel(proceed) || !proceed) return;
   }
   const ok = await confirm({ message: `Create '[plx] ${name}' (${result.matchedIds.length} tracks)?`, initialValue: false });
   if (isCancel(ok) || !ok) return;
-  await converter.writePlaylist(name, result.matchedIds);
+  await conversion.writePlaylist(name, result.matchedIds);
 }
 
 // Build a validated Spotify session (sp_dc cookie → authenticated token). Returns token or null.
@@ -160,26 +159,35 @@ async function pickSpotifyPlaylist(token: string, role: 'source' | 'target'): Pr
   return String(pick);
 }
 
-// Pick an existing Spotify playlist (writable) as reverse target. Returns uri or null.
+// Pick an existing Spotify playlist (writable) as the target. Returns uri or null.
 async function chooseSpotifyTarget(token: string): Promise<string | null> {
   return pickSpotifyPlaylist(token, 'target');
 }
 
-// Reverse flow: Deezer playlist (source) → new or existing Spotify playlist (target).
-async function reverseConvertFlow(cfg: Config, options: CliOptions): Promise<void> {
+// Deezer source → Spotify target, new or existing playlist.
+async function deezerToSpotify(cfg: Config, options: CliOptions): Promise<void> {
   const deezer = await ensureDeezer(cfg);
   if (!deezer) return;
   const source = await chooseTarget(deezer, 'source');
   if (!source) return;
   const token = await ensureSpotify(cfg);
   if (!token) return;
-  const kind = await chooseTargetKind();
-  if (kind === 'existing') {
-    const target = await chooseSpotifyTarget(token);
-    if (target) await reverseWriteToExisting(deezer, token, source.id, source.title, target, options.output);
-  } else if (kind === 'new') {
-    await reverseConvert(deezer, token, source.id, source.title, options.output);
+  let target: string | null = null;
+  if (!options.dryRun) {
+    const kind = await chooseTargetKind();
+    if (!kind) return;
+    if (kind === 'existing') {
+      target = await chooseSpotifyTarget(token);
+      if (!target) return;
+    }
   }
+  const conversion = new Conversion(deezer, new SpotifyProvider(token), options.output);
+  const result = await conversion.matchPlaylist({ name: source.title, uri: source.id }, options.dryRun);
+  if (!options.dryRun && result.matchedIds.length) {
+    if (target) await conversion.writeToExisting(source.title, target, result.matchedIds);
+    else await conversion.writePlaylist(source.title, result.matchedIds);
+  }
+  await conversion.writeReport();
 }
 
 function warnLogin(sites: string): void {
@@ -196,8 +204,8 @@ async function runInteractive(options: CliOptions): Promise<void> {
     const choice = await select({
       message: 'Pick an action',
       options: [
-        { value: 'forward', label: 'Spotify → Deezer' },
-        { value: 'reverse', label: 'Deezer → Spotify' },
+        { value: 'sp2dz', label: 'Spotify → Deezer' },
+        { value: 'dz2sp', label: 'Deezer → Spotify' },
         { value: 'arl', label: `Deezer ARL: ${cfg.deezerArl ? '✓ saved' : '(not set)'}` },
         { value: 'spdc', label: `Spotify sp_dc: ${cfg.spotifyDc ? '✓ saved' : '(not set)'}` },
         { value: 'autofetch', label: 'Auto-fetch credentials (from browser)' },
@@ -206,8 +214,8 @@ async function runInteractive(options: CliOptions): Promise<void> {
       ],
     });
     if (isCancel(choice) || choice === 'quit') break;
-    if (choice === 'forward') { await convert(cfg, options); continue; }
-    if (choice === 'reverse') { await reverseConvertFlow(cfg, options); continue; }
+    if (choice === 'sp2dz') { await spotifyToDeezer(cfg, options); continue; }
+    if (choice === 'dz2sp') { await deezerToSpotify(cfg, options); continue; }
     if (choice === 'arl') {
       warnLogin('Deezer (deezer.com)');
       const filled = await tryAutoFillCredentials(cfg);
@@ -262,15 +270,15 @@ async function main() {
   const cfg = await loadConfig(true);
   const deezer = new DeezerClient(cfg.deezerArl);
   await deezer.getMe();
-  const converter = new Converter(deezer, await anonymousToken(), options.output);
+  const conversion = new Conversion(new SpotifyProvider(await anonymousToken()), deezer, options.output);
 
   for (const raw of options.urls) {
     const id = parsePlaylistId(raw);
     const name = await playlistName(id);
-    const result = await converter.matchPlaylist({ name, uri: id }, options.dryRun);
-    if (!options.dryRun && result.matchedIds.length) await converter.writePlaylist(name, result.matchedIds);
+    const result = await conversion.matchPlaylist({ name, uri: id }, options.dryRun);
+    if (!options.dryRun && result.matchedIds.length) await conversion.writePlaylist(name, result.matchedIds);
   }
-  await converter.writeReport();
+  await conversion.writeReport();
   outro(`Report saved to ${options.output}`);
 }
 

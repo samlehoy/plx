@@ -24,7 +24,7 @@ Spotify → Deezer reads Spotify anonymously — no Premium, no OAuth.
 | Cookie | Env var | Used for | Needed when |
 |---|---|---|---|
 | Deezer `arl` | `DEEZER_ARL` | authenticate Deezer playlist writes | any flow that writes to Deezer (Spotify → Deezer) |
-| Spotify `sp_dc` | `SPOTIFY_DC` | mint an authenticated Spotify token (full search+write scope) | the reverse flow (Deezer → Spotify) |
+| Spotify `sp_dc` | `SPOTIFY_DC` | mint an authenticated Spotify token (full search+write scope) | a conversion into a Spotify target |
 
 Reading a Spotify playlist for a dry run needs **no credentials**.
 
@@ -50,7 +50,7 @@ Copy `.env.example` to `.env` (or export in shell). Env vars **override** stored
 | Variable | Required | Purpose |
 |---|---|---|
 | `DEEZER_ARL` | for writing to Deezer | Deezer session cookie (see above). |
-| `SPOTIFY_DC` | for writing to Spotify | Spotify web session cookie (reverse flow only). |
+| `SPOTIFY_DC` | for writing to Spotify | Spotify web session cookie (needed only when Spotify is the target). |
 
 ## Config directory
 

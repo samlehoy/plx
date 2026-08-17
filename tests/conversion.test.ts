@@ -1,7 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { readFile } from 'node:fs/promises';
-import { Converter } from '../src/converter.js';
+import { Conversion } from '../src/conversion.js';
 import { DeezerClient } from '../src/deezer.js';
+import { SpotifyProvider } from '../src/spotify.js';
 import { writeCsv } from '../src/csv.js';
 import { mkdtemp } from 'node:fs/promises';
 import { join } from 'node:path';
@@ -21,6 +22,11 @@ function mockFetch(handler: (url: string, init?: RequestInit) => unknown, status
 
 function deezerFixture(): DeezerClient {
   return new DeezerClient('test-arl');
+}
+
+// Spotify source → Deezer target, the direction these cases exercise.
+function conversionFixture(target: DeezerClient, output = 'report.csv'): Conversion {
+  return new Conversion(new SpotifyProvider('token'), target, output);
 }
 
 const samplePlaylist = { name: 'Test Playlist', uri: 'spotify:playlist:abc123' };
@@ -46,7 +52,7 @@ function pathfinderItem(name: string, artist: string, durationMs?: number) {
   };
 }
 
-describe('Converter', () => {
+describe('Conversion', () => {
   beforeEach(() => { vi.stubGlobal('setTimeout', setTimeout); });
   afterEach(() => { vi.unstubAllGlobals(); });
 
@@ -56,7 +62,7 @@ describe('Converter', () => {
       if (url.includes('api.deezer.com')) return { data: [{ id: 42, title: 'Song One', artist: { name: 'Artist One' }, duration: 240 }] };
       return {};
     });
-    const converter = new Converter(deezerFixture(), 'token', 'report.csv');
+    const converter = conversionFixture(deezerFixture());
     const result = await converter.matchPlaylist(samplePlaylist, true);
     expect(result.matchedIds).toHaveLength(1);
     expect(result.total).toBe(1);
@@ -73,7 +79,7 @@ describe('Converter', () => {
       if (url.includes('api-partner.spotify.com')) throw new Error('network down');
       return {};
     });
-    const converter = new Converter(deezerFixture(), 'token', 'report.csv');
+    const converter = conversionFixture(deezerFixture());
     const result = await converter.matchPlaylist(samplePlaylist, false);
     expect(result.matchedIds).toHaveLength(0);
     expect(result.total).toBe(0);
@@ -82,6 +88,9 @@ describe('Converter', () => {
 });
 
 describe('truncation parity', () => {
+  // Unstub here or the instant-setTimeout shim below leaks into every later describe block.
+  afterEach(() => { vi.unstubAllGlobals(); });
+
   it('records a truncation warning when embed fallback truncates at 100', async () => {
     vi.stubGlobal('setTimeout', (fn: () => void) => { fn(); return 0 as unknown as NodeJS.Timeout; });
     mockFetch((url) => {
@@ -93,7 +102,7 @@ describe('truncation parity', () => {
       if (url.includes('api.deezer.com')) return { data: [] };
       return {};
     });
-    const converter = new Converter(deezerFixture(), 'token', 'report.csv');
+    const converter = conversionFixture(deezerFixture());
     const result = await converter.matchPlaylist(samplePlaylist, false);
     expect(result.truncated).toBe(true);
     expect(converter.rows[0].note).toContain('WARNING: truncated');
@@ -106,10 +115,11 @@ describe('no-match guard', () => {
       if (url.includes('api-partner.spotify.com')) return pathfinderResponse([pathfinderItem('Song One', 'Artist One', 240000)]);
       return { data: [] };
     });
-    const converter = new Converter(deezerFixture(), 'token', 'report.csv');
+    const deezer = deezerFixture();
+    const converter = conversionFixture(deezer);
     const result = await converter.matchPlaylist(samplePlaylist, false);
     expect(result.matchedIds).toHaveLength(0);
-    const createSpy = vi.spyOn(converter['deezer'] as unknown as { createPlaylist: () => Promise<string> }, 'createPlaylist').mockResolvedValue('plx-id');
+    const createSpy = vi.spyOn(deezer, 'createPlaylist').mockResolvedValue('plx-id');
     await converter.writePlaylist(samplePlaylist.name, result.matchedIds);
     expect(createSpy).not.toHaveBeenCalled();
   });
@@ -117,44 +127,60 @@ describe('no-match guard', () => {
 
 describe('writeToExisting dedupe', () => {
   it('adds only tracks not already in the target playlist', async () => {
-    const converter = new Converter(deezerFixture(), 'token', 'report.csv');
+    const deezer = deezerFixture();
+    const converter = conversionFixture(deezer);
     const existing = new Set(['111', '222']);
-    const getIdsSpy = vi.spyOn(converter['deezer'] as unknown as { getPlaylistTrackIds: (id: string) => Promise<Set<string>> }, 'getPlaylistTrackIds').mockResolvedValue(existing);
-    const addSpy = vi.spyOn(converter['deezer'] as unknown as { addTracks: (id: string, ids: string[]) => Promise<number> }, 'addTracks').mockResolvedValue(2);
-    vi.spyOn(converter['deezer'] as unknown as { getPlaylistTrackOrder: (id: string) => Promise<string[]> }, 'getPlaylistTrackOrder').mockResolvedValue(['333', '444']);
-    vi.spyOn(converter['deezer'] as unknown as { moveTrack: (id: string, trackId: string, after: string | null) => Promise<void> }, 'moveTrack').mockResolvedValue(undefined);
+    const getIdsSpy = vi.spyOn(deezer, 'getPlaylistTrackIds').mockResolvedValue(existing);
+    const addSpy = vi.spyOn(deezer, 'addTracks').mockResolvedValue(2);
+    vi.spyOn(deezer, 'getPlaylistTrackOrder').mockResolvedValue(['333', '444']);
+    vi.spyOn(deezer, 'moveTrack').mockResolvedValue(undefined);
     await converter.writeToExisting('Test', 'target-id', ['111', '222', '333', '444']);
     expect(addSpy).toHaveBeenCalledTimes(1);
     expect(addSpy).toHaveBeenCalledWith('target-id', ['333', '444']);
     expect(getIdsSpy).toHaveBeenCalledWith('target-id');
   });
   it('dedupes duplicates within the batch', async () => {
-    const converter = new Converter(deezerFixture(), 'token', 'report.csv');
-    vi.spyOn(converter['deezer'] as unknown as { getPlaylistTrackIds: (id: string) => Promise<Set<string>> }, 'getPlaylistTrackIds').mockResolvedValue(new Set());
-    const addSpy = vi.spyOn(converter['deezer'] as unknown as { addTracks: (id: string, ids: string[]) => Promise<number> }, 'addTracks').mockResolvedValue(2);
-    vi.spyOn(converter['deezer'] as unknown as { getPlaylistTrackOrder: (id: string) => Promise<string[]> }, 'getPlaylistTrackOrder').mockResolvedValue(['111', '222', '333']);
+    const deezer = deezerFixture();
+    const converter = conversionFixture(deezer);
+    vi.spyOn(deezer, 'getPlaylistTrackIds').mockResolvedValue(new Set());
+    const addSpy = vi.spyOn(deezer, 'addTracks').mockResolvedValue(2);
+    vi.spyOn(deezer, 'getPlaylistTrackOrder').mockResolvedValue(['111', '222', '333']);
     await converter.writeToExisting('Test', 'target-id', ['111', '111', '222', '222', '333']);
     expect(addSpy).toHaveBeenCalledWith('target-id', ['111', '222', '333']);
   });
 });
 
-describe('reorderToMatch', () => {
+// The reorder capability lives on the provider that has it (ADR 0002), so it is exercised there.
+describe('reorder', () => {
   it('moves tracks into source order', async () => {
-    const converter = new Converter(deezerFixture(), 'token', 'report.csv');
-    vi.spyOn(converter['deezer'] as unknown as { getPlaylistTrackOrder: (id: string) => Promise<string[]> }, 'getPlaylistTrackOrder').mockResolvedValue(['C', 'A', 'B']);
-    const moveSpy = vi.spyOn(converter['deezer'] as unknown as { moveTrack: (id: string, trackId: string, after: string | null) => Promise<void> }, 'moveTrack').mockResolvedValue(undefined);
-    await converter.reorderToMatch('Test', 'target-id', ['A', 'B', 'C']);
+    const deezer = deezerFixture();
+    vi.spyOn(deezer, 'getPlaylistTrackOrder').mockResolvedValue(['C', 'A', 'B']);
+    const moveSpy = vi.spyOn(deezer, 'moveTrack').mockResolvedValue(undefined);
+    await deezer.reorder('target-id', ['A', 'B', 'C']);
     // A to front (after null), B after A, C after B
     expect(moveSpy).toHaveBeenNthCalledWith(1, 'target-id', 'A', null);
     expect(moveSpy).toHaveBeenNthCalledWith(2, 'target-id', 'B', 'A');
     expect(moveSpy).toHaveBeenNthCalledWith(3, 'target-id', 'C', 'B');
   });
   it('skips reorder when already in order', async () => {
-    const converter = new Converter(deezerFixture(), 'token', 'report.csv');
-    vi.spyOn(converter['deezer'] as unknown as { getPlaylistTrackOrder: (id: string) => Promise<string[]> }, 'getPlaylistTrackOrder').mockResolvedValue(['A', 'B', 'C']);
-    const moveSpy = vi.spyOn(converter['deezer'] as unknown as { moveTrack: (id: string, trackId: string, after: string | null) => Promise<void> }, 'moveTrack').mockResolvedValue(undefined);
-    await converter.reorderToMatch('Test', 'target-id', ['A', 'B', 'C']);
+    const deezer = deezerFixture();
+    vi.spyOn(deezer, 'getPlaylistTrackOrder').mockResolvedValue(['A', 'B', 'C']);
+    const moveSpy = vi.spyOn(deezer, 'moveTrack').mockResolvedValue(undefined);
+    await deezer.reorder('target-id', ['A', 'B', 'C']);
     expect(moveSpy).not.toHaveBeenCalled();
+  });
+});
+
+// A target with no reorder capability still completes the write by appending (ADR 0002).
+describe('target without reorder', () => {
+  it('completes writeToExisting by appending', async () => {
+    const spotify = new SpotifyProvider('token');
+    expect(spotify.reorder).toBeUndefined();
+    const conversion = new Conversion(deezerFixture(), spotify, 'report.csv');
+    vi.spyOn(spotify, 'getPlaylistTrackIds').mockResolvedValue(new Set(['spotify:track:111']));
+    const addSpy = vi.spyOn(spotify, 'addTracks').mockResolvedValue(1);
+    await conversion.writeToExisting('Test', 'spotify:playlist:target', ['spotify:track:111', 'spotify:track:222']);
+    expect(addSpy).toHaveBeenCalledWith('spotify:playlist:target', ['spotify:track:222']);
   });
 });
 

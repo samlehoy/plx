@@ -1,7 +1,8 @@
 import { createHmac } from 'node:crypto';
 import { z } from 'zod';
 import { browserHeaders, fetchJson, fetchText } from './http.js';
-import type { DeezerCandidate, Track } from './types.js';
+import { matchCandidates, searchQuery } from './matcher.js';
+import type { Candidate, Match, Provider, Track } from './types.js';
 
 const PATHFINDER_URL = 'https://api-partner.spotify.com/pathfinder/v1/query';
 const FETCH_PLAYLIST_SHA = 'a65e12194ed5fc443a1cdebed5fabe33ca5b07b987185d63c72483867ad13cb4';
@@ -87,7 +88,7 @@ export function parsePlaylistId(ref: string): string {
 }
 
 // Resolve a spotify:track:ID URI to its real title/artist/duration via the anonymous
-// embed endpoint — used to verify reverse-flow matches (precision check).
+// embed endpoint — used to verify matches into a Spotify target (precision check).
 export async function resolveTrackMeta(uri: string): Promise<Track> {
   const id = uri.split(':').pop() ?? uri;
   const entity = (await nextData(`https://open.spotify.com/embed/track/${id}`)).props?.pageProps?.state?.data?.entity;
@@ -99,7 +100,7 @@ export async function resolveTrackMeta(uri: string): Promise<Track> {
   };
 }
 
-// --- Authenticated write (reverse flow: Deezer → Spotify) ---
+// --- Authenticated search + write (Spotify as a conversion target) ---
 const PATHFINDER_V2_URL = 'https://api-partner.spotify.com/pathfinder/v2/query';
 const SPCLIENT_URL = 'https://spclient.wg.spotify.com';
 // Persisted-query hashes for write/search — captured from the web player; they rotate (see CONTINUATION.md).
@@ -154,8 +155,8 @@ async function tokenFromSpDc(spDc: string): Promise<string> {
 // Authenticated write token from an sp_dc cookie (full web-player scope: search + write).
 export function authenticatedToken(spDc: string): Promise<string> { return tokenFromSpDc(spDc); }
 
-// Spotify search, shaped as DeezerCandidate (duration in seconds) so matchCandidates is reusable.
-export async function searchTrack(term: string, token: string): Promise<DeezerCandidate[]> {
+// Spotify search, shaped as Candidate (duration in seconds) so matchCandidates is reusable.
+export async function searchTrack(term: string, token: string): Promise<Candidate[]> {
   const body = { variables: { searchTerm: term, offset: 0, limit: 10, numberOfTopResults: 10, includePreReleases: false, includeAudiobooks: false, includeAuthors: false }, operationName: 'searchTracks', extensions: { persistedQuery: { version: 1, sha256Hash: SEARCH_TRACKS_SHA } } };
   const raw = await fetchJson<{ errors?: Array<{ message: string }>; data?: { searchV2?: { tracksV2?: { items?: Array<{ item?: { data?: { uri?: string; name?: string; artists?: { items?: Array<{ profile?: { name?: string } }> }; duration?: { totalMilliseconds?: number } } } }> } } } }>(PATHFINDER_V2_URL, { method: 'POST', headers: writeHeaders(token), body: JSON.stringify(body) });
   if (raw.errors?.length) throw new Error(`searchTracks: ${raw.errors[0].message}`);
@@ -203,7 +204,32 @@ export async function listPlaylists(token: string): Promise<{ uri: string; name:
   });
 }
 
-// Track URIs currently in a playlist — for dedupe on the reverse flow. Reuses the proven v1 fetchPlaylist read path.
+// Spotify identifies a playlist by bare id on the read paths and by URI on the write paths, so the
+// provider normalizes whichever form it is handed (URL, URI, or raw id) at the boundary.
+const playlistUri = (ref: string) => `spotify:playlist:${parsePlaylistId(ref)}`;
+
+// Spotify as a Provider. `token` is anonymous (read-only) or minted from sp_dc (search + write);
+// a conversion only ever asks for what its direction needs. No reorder — Spotify exposes no move
+// primitive in the endpoints plx uses, so a Spotify target is dedupe-and-append (ADR 0002).
+export class SpotifyProvider implements Provider {
+  readonly name = 'Spotify';
+  constructor(private readonly token: string) {}
+  readPlaylist(ref: string): Promise<{ tracks: Track[]; truncated: boolean }> { return readPlaylist(parsePlaylistId(ref), this.token); }
+  async search(track: Track): Promise<Match | null> {
+    const candidates = await searchTrack(searchQuery(track.name, track.artist), this.token);
+    return matchCandidates(track.name, track.artist, track.durationMs, candidates);
+  }
+  createPlaylist(title: string): Promise<string> { return createPlaylist(title, this.token); }
+  // Returns the count submitted, not one the service confirmed: addToPlaylist reports transport
+  // errors only, so a silently dropped (relinked/unavailable) uri is still counted. Deezer's
+  // addTracks does validate what it accepted — the two differ on how much this number is worth.
+  async addTracks(ref: string, trackUris: string[]): Promise<number> { await addTracks(playlistUri(ref), trackUris, this.token); return trackUris.length; }
+  async getPlaylistTrackIds(ref: string): Promise<Set<string>> { return new Set(await fetchTrackUris(parsePlaylistId(ref), this.token)); }
+  async listPlaylists(): Promise<{ id: string; title: string }[]> { return (await listPlaylists(this.token)).map((p) => ({ id: p.uri, title: p.name })); }
+  resolveTrack(uri: string): Promise<Track> { return resolveTrackMeta(uri); }
+}
+
+// Track URIs currently in a playlist — for dedupe against an existing target. Reuses the proven v1 fetchPlaylist read path.
 export async function fetchTrackUris(id: string, token: string): Promise<string[]> {
   const uris: string[] = [];
   for (let offset = 0; ; ) {
