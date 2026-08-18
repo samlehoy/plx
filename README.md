@@ -36,6 +36,17 @@ Options:
   -h, --help              show help
 ```
 
+## Screenshots
+
+**Interactive menu** — run `plx` with no args for guided setup:
+<img src="screenshots/cli-interactive-menu.png" width="600" alt="Interactive menu showing action selection with credentials saved status" />
+
+**CLI conversion flow** — select source and target providers:
+<img src="screenshots/cli-provider-selection.png" width="600" alt="Provider selection showing YouTube Music → Spotify conversion path" />
+
+**Website** — learn more at [plx.sh](https://plx.sh):
+<img src="screenshots/website-landing.png" width="600" alt="Landing page with 'Move your playlist. No dev account.' headline" />
+
 ## Credentials
 
 | Cookie | Env var | Needed for |
