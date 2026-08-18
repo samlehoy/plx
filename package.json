@@ -1,6 +1,6 @@
 {
   "name": "plx-converter",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Convert playlists between Spotify, Deezer, and YouTube Music using your own browser session",
   "license": "MIT",
   "type": "module",
