@@ -49,6 +49,16 @@ const TIERS: Tier[] = [
     when: 'Handles featured-artist suffixes and parentheticals without a scorer.',
     units: 'containment · bidirectional',
   },
+  {
+    id: 'video',
+    label: 'Video',
+    ground: '#141416',
+    ink: '#EFEFEE',
+    title: 'Video',
+    rule: 'Artist in title or channel + title containment + duration within ±3s',
+    when: 'Last resort for YouTube Music videos after catalog search returns nothing. Artist equality relaxes to containment; a missing duration is rejected.',
+    units: 'duration · mandatory',
+  },
 ]
 
 /* ---------- proof chart: summed sines, honest endpoints ---------- */
@@ -322,15 +332,15 @@ export default function App() {
       >
         <div className="relative z-10 max-w-[1440px] mx-auto px-5 md:px-8 pt-14 md:pt-20 pb-[min(42vw,380px)] md:pb-[min(28vw,320px)] lg:pb-40 flex">
         <div className="w-full lg:w-[54%]">
-          <p className="meta text-muted reveal reveal-d1">Spotify ⇄ Deezer</p>
+          <p className="meta text-muted reveal reveal-d1">Spotify ⇄ Deezer ⇄ YouTube Music</p>
           <h1 className="mt-5 font-extrabold text-[clamp(34px,5.1vw,74px)] leading-[0.92] tracking-[-0.045em] text-ink reveal reveal-d2">
             Move your playlist.
             <br />
             <span className="text-signal">No dev account.</span>
           </h1>
           <p className="mt-7 max-w-[38ch] text-[15px] md:text-[16px] leading-[1.55] text-secondary font-medium tracking-[-0.01em] reveal reveal-d3">
-            plx moves Spotify → Deezer with browser sessions, not API keys—no Developer account,
-            no OAuth app. One Deezer ARL cookie is enough. Reverse (Deezer → Spotify) is planned.
+            plx moves playlists between Spotify, Deezer, and YouTube Music using your own browser
+            session — no developer account, no API keys. Read anonymously, write with one cookie.
           </p>
           <div className="mt-8 flex flex-wrap items-center gap-3 reveal reveal-d4">
             <CopyInstallPill size="sm" scrollToId="install" />
@@ -343,10 +353,10 @@ export default function App() {
           </div>
           <div className="mt-10 pt-5 border-t hairline space-y-2 reveal reveal-d5">
             <p className="meta-sm text-muted">
-              <span className="text-signal">Read</span> — Spotify · anonymous
+              <span className="text-signal">Read</span> — any provider · anonymous
             </p>
             <p className="meta-sm text-muted">
-              <span className="text-signal">Write</span> — Deezer · one ARL cookie
+              <span className="text-signal">Write</span> — one cookie per provider
             </p>
             <p className="meta-sm text-muted">
               <span className="text-signal">Report</span> — CSV · per-track method
@@ -499,39 +509,41 @@ export default function App() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-14 lg:gap-20">
             <div>
               <h2 className="font-extrabold text-[clamp(34px,4.2vw,60px)] leading-[0.94] tracking-[-0.045em] reveal">
-                Four modules.
+                Six directions.
                 <br />
-                One pass.
+                One path.
               </h2>
               <p className="mt-6 max-w-[40ch] text-[15px] md:text-[16px] leading-[1.55] text-secondary font-medium tracking-[-0.01em] reveal reveal-d1">
-                The CLI walks a fixed pipeline: anonymous Spotify read, tiered match, Deezer
-                write, CSV report. Every hop is a module with a single job.
+                Source and target are both parameters, so three providers give six directions
+                with no direction-specific code. One path: read, tiered match, write, report.
               </p>
 
               <dl className="mt-12 reveal reveal-d2">
                 <div className="def-row py-4 flex items-baseline justify-between gap-4">
                   <div className="min-w-0">
-                    <dt className="meta text-signal-text">spotify.ts</dt>
+                    <dt className="meta text-signal-text">registry.ts</dt>
                     <dd className="mt-1 text-[14px] text-secondary font-medium tracking-[-0.01em]">
-                      Anonymous playlist read via Pathfinder, embed fallback at 100 tracks.
+                      One provider spec per service. Add a provider here, not a new code path.
                     </dd>
                   </div>
-                  <dd className="meta-sm text-muted shrink-0 tabular-nums">read</dd>
+                  <dd className="meta-sm text-muted shrink-0 tabular-nums">registry</dd>
                 </div>
                 <div className="def-row py-4 flex items-baseline justify-between gap-4">
                   <div className="min-w-0">
-                    <dt className="meta text-signal-text">deezer.ts</dt>
+                    <dt className="meta text-signal-text">spotify.ts · deezer.ts · ytmusic.ts</dt>
                     <dd className="mt-1 text-[14px] text-secondary font-medium tracking-[-0.01em]">
-                      ARL cookie session. Search, add, and playlist create.
+                      Three implementations of one Provider interface — read, search, write — over
+                      your browser session, no API keys.
                     </dd>
                   </div>
-                  <dd className="meta-sm text-muted shrink-0 tabular-nums">write</dd>
+                  <dd className="meta-sm text-muted shrink-0 tabular-nums">read+write</dd>
                 </div>
                 <div className="def-row py-4 flex items-baseline justify-between gap-4">
                   <div className="min-w-0">
-                    <dt className="meta text-signal-text">converter.ts</dt>
+                    <dt className="meta text-signal-text">conversion.ts</dt>
                     <dd className="mt-1 text-[14px] text-secondary font-medium tracking-[-0.01em]">
-                      Orchestrates the pass, ms→s duration units, CSV emission.
+                      Source and target are parameters, so six directions run one path. Verifies
+                      matches, emits CSV.
                     </dd>
                   </div>
                   <dd className="meta-sm text-muted shrink-0 tabular-nums">orch</dd>
@@ -540,7 +552,7 @@ export default function App() {
                   <div className="min-w-0">
                     <dt className="meta text-signal-text">matcher.ts</dt>
                     <dd className="mt-1 text-[14px] text-secondary font-medium tracking-[-0.01em]">
-                      Three tiers: exact, fuzzy-duration (±3s), fuzzy-title.
+                      Four tiers: exact, fuzzy-duration (±3s), fuzzy-title, video.
                     </dd>
                   </div>
                   <dd className="meta-sm text-muted shrink-0 tabular-nums">match</dd>
@@ -605,12 +617,12 @@ export default function App() {
                   style={{ textTransform: 'uppercase' }}
                 >
                   <text x="70" y="48">CLI args</text>
-                  <text x="256" y="164">Spotify read</text>
-                  <text x="256" y="176" fill="#43444A">Pathfinder → embed</text>
+                  <text x="256" y="164">source read</text>
+                  <text x="256" y="176" fill="#43444A">read · any provider</text>
                   <text x="348" y="112" fill="#2F5BFF">exact</text>
                   <text x="348" y="292" fill="#2F5BFF">fuzzy-dur</text>
                   <text x="460" y="206" fill="#2F5BFF">fuzzy-title</text>
-                  <text x="476" y="324">Deezer write</text>
+                  <text x="476" y="324">target write</text>
                   <text x="40" y="400">CSV report · per-track method</text>
                 </g>
 
@@ -626,7 +638,7 @@ export default function App() {
       <section id="spin" className="spin-stage bg-stage" aria-label="Scroll-driven record stage">
         <div className="spin-sticky">
           <div className="spin-marquee" id="spin-marquee" aria-hidden="true">
-            {'SPOTIFY DEEZER  SPOTIFY DEEZER  SPOTIFY DEEZER  SPOTIFY DEEZER'}
+            {'SPOTIFY DEEZER YOUTUBE MUSIC  SPOTIFY DEEZER YOUTUBE MUSIC  SPOTIFY DEEZER YOUTUBE MUSIC  SPOTIFY DEEZER YOUTUBE MUSIC'}
           </div>
           <img
             id="spin-record"
@@ -659,7 +671,7 @@ export default function App() {
         <div className="max-w-[1440px] mx-auto px-5 md:px-8 py-20 md:py-28 lg:py-32">
           <div className="flex items-start justify-between gap-6 mb-12 md:mb-16">
             <p className="meta reveal" style={tierField(48)}>05 / match</p>
-            <p className="meta reveal" style={tierField(48)}>three tiers · first hit wins</p>
+            <p className="meta reveal" style={tierField(48)}>four tiers · first hit wins</p>
           </div>
 
           <h2 className="font-extrabold text-[clamp(34px,4.2vw,60px)] leading-[0.94] tracking-[-0.045em] max-w-[12ch] reveal">
@@ -671,8 +683,8 @@ export default function App() {
             className="mt-6 max-w-[42ch] text-[15px] md:text-[16px] leading-[1.55] font-medium tracking-[-0.01em] reveal reveal-d1"
             style={tierField(62)}
           >
-            matcher.ts tries exact first, then relaxes duration, then title containment. Each
-            tier is a deterministic rule — not a score.
+            matcher.ts tries exact first, then relaxes duration, then title containment, then a
+            video fallback. Each tier is a deterministic rule — not a score.
           </p>
 
           <div className="mt-10 flex flex-wrap gap-3 reveal reveal-d2" role="group" aria-label="Match tiers">
@@ -731,8 +743,8 @@ export default function App() {
                 ['Language', 'TypeScript'],
                 ['Runtime', 'Node ≥ 22'],
                 ['Install', 'npm i -g plx-converter'],
-                ['Credentials', '1 (DEEZER_ARL)'],
-                ['Spotify auth', 'none'],
+                ['Credentials', 'optional · per provider'],
+                ['Spotify auth', 'none to read'],
                 ['Deezer auth', 'ARL cookie'],
               ].map(([k, v], i, arr) => (
                 <div
@@ -748,7 +760,7 @@ export default function App() {
             </div>
             <div>
               {[
-                ['Match tiers', '3'],
+                ['Match tiers', '4'],
                 ['Duration match', '±3s'],
                 ['Duration units', 'ms → s'],
                 ['Search', 'free-text words'],
@@ -775,7 +787,7 @@ export default function App() {
         <div className="max-w-[1440px] mx-auto px-5 md:px-8 pt-20 md:pt-28 lg:pt-32 pb-8">
           <div className="flex items-start justify-between gap-6 mb-12">
             <p className="meta text-muted reveal">07 / install</p>
-            <p className="meta text-muted reveal">one credential</p>
+            <p className="meta text-muted reveal">your own session</p>
           </div>
 
           <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-10">
@@ -786,12 +798,12 @@ export default function App() {
                 Move everything.
               </h2>
               <p className="mt-5 meta text-muted reveal reveal-d1">
-                Requires Node ≥ 22 and a Deezer ARL cookie — the login session Deezer stores
-                in your browser once you're signed in.{' '}
+                Requires Node ≥ 22 and, to write, one browser-session cookie for the target
+                provider — the login cookie it already stores once you're signed in.{' '}
                 <a href={ARL_GUIDE} target="_blank" rel="noreferrer" className="underline hover:text-ink">
                   Grab yours
                 </a>
-                , stored locally, never sent anywhere else. Spotify stays anonymous.
+                , stored locally, never sent anywhere else. Reads stay anonymous.
               </p>
             </div>
             <div className="flex flex-wrap gap-3 reveal reveal-d2">

@@ -12,7 +12,7 @@ Setup guide for credentials, config directory, and storage.
 ## Quick start
 
 ```bash
-npm install -g plx
+npm install -g plx-converter
 plx --url "https://open.spotify.com/playlist/PLAYLIST_ID" --dry-run
 ```
 

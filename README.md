@@ -9,7 +9,7 @@ Converts a playlist from any of the three services into any other — six direct
 ## Install
 
 ```bash
-npm install -g plx
+npm install -g plx-converter
 ```
 
 Requires Node.js ≥ 22.
