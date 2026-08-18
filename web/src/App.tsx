@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type MouseEvent } from 'react'
 
 const INSTALL = 'npm i -g plx-converter'
+const DRY_RUN = 'plx --dry-run'
 const GITHUB = 'https://github.com/samlehoy/plx'
 const NPM = 'https://www.npmjs.com/package/plx-converter'
 const DOCS = 'https://github.com/samlehoy/plx/tree/master/docs'
@@ -132,18 +133,52 @@ async function copyToClipboard(text: string): Promise<boolean> {
   }
 }
 
-function CopyInstallPill({ size, scrollToId }: { size: 'sm' | 'lg'; scrollToId?: string }) {
+let toastEl: HTMLDivElement | null = null
+let toastTimer: number | undefined
+let toastMove: ((e: PointerEvent) => void) | null = null
+
+function showCopyToast(x: number, y: number) {
+  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  if (!toastEl) {
+    toastEl = document.createElement('div')
+    toastEl.className = 'copy-toast'
+    toastEl.textContent = 'Copied'
+    toastEl.setAttribute('aria-hidden', 'true')
+    document.body.appendChild(toastEl)
+  }
+  const place = (px: number, py: number) => {
+    toastEl!.style.left = `${px + 14}px`
+    toastEl!.style.top = `${py - 34}px`
+  }
+  place(x, y)
+  toastEl.classList.add('copy-toast--show')
+  window.clearTimeout(toastTimer)
+  toastTimer = window.setTimeout(() => toastEl!.classList.remove('copy-toast--show'), 1200)
+
+  if (toastMove) window.removeEventListener('pointermove', toastMove)
+  if (!reduce) {
+    toastMove = (e) => place(e.clientX, e.clientY)
+    window.addEventListener('pointermove', toastMove, { passive: true })
+    window.setTimeout(() => {
+      if (toastMove) window.removeEventListener('pointermove', toastMove)
+      toastMove = null
+    }, 1200)
+  }
+}
+
+function CopyInstallPill({ size, scrollToId, command = INSTALL, outline }: { size: 'sm' | 'lg'; scrollToId?: string; command?: string; outline?: boolean }) {
   const [copied, setCopied] = useState(false)
   const timeoutRef = useRef<number | undefined>(undefined)
 
   useEffect(() => () => window.clearTimeout(timeoutRef.current), [])
 
-  const handleClick = async () => {
-    const ok = await copyToClipboard(INSTALL)
+  const handleClick = async (e: MouseEvent<HTMLButtonElement>) => {
+    const ok = await copyToClipboard(command)
     if (ok) {
       setCopied(true)
       window.clearTimeout(timeoutRef.current)
       timeoutRef.current = window.setTimeout(() => setCopied(false), 1400)
+      showCopyToast(e.clientX, e.clientY)
     }
     if (scrollToId) {
       const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches
@@ -152,16 +187,22 @@ function CopyInstallPill({ size, scrollToId }: { size: 'sm' | 'lg'; scrollToId?:
   }
 
   const base = size === 'lg' ? 'pill meta h-12 px-6' : 'pill meta h-11 px-5'
-  const color = copied ? 'bg-signal text-ground' : 'bg-ink text-ground hover:bg-signal'
+  const color = outline
+    ? copied
+      ? 'bg-spotify text-ink border border-spotify'
+      : 'border border-[rgba(13,13,15,.18)] text-ink hover:border-spotify-text hover:text-spotify-text'
+    : copied
+      ? 'bg-spotify text-ink'
+      : 'bg-ink text-ground hover:bg-spotify hover:text-ink'
 
   return (
     <button
       type="button"
       onClick={handleClick}
-      aria-label={`Copy install command: ${INSTALL}`}
+      aria-label={`Copy command: ${command}`}
       className={`${base} ${color}`}
     >
-      {INSTALL}
+      {command}
       <span className="sr-only" role="status">
         {copied ? 'Command copied to clipboard' : ''}
       </span>
@@ -179,7 +220,7 @@ export default function App() {
 
     // Hero immediate reveal on rAF (not observed).
     const raf = requestAnimationFrame(() => {
-      document.querySelectorAll('.plx-word, .hero-record').forEach((el) => {
+      document.querySelectorAll('.hero-record').forEach((el) => {
         el.classList.add('shown')
       })
       document.querySelectorAll('#overview .reveal').forEach((el) => {
@@ -223,8 +264,6 @@ export default function App() {
 
     // Single passive rAF-throttled scroll listener.
     let ticking = false
-    const plxBack = document.getElementById('plx-back')
-    const plxFront = document.getElementById('plx-front')
     const heroRecord = document.getElementById('hero-record')
     const heroSection = document.getElementById('overview')
     const spinSection = document.getElementById('spin')
@@ -239,14 +278,10 @@ export default function App() {
         ticking = false
         const scrollY = window.scrollY || window.pageYOffset
 
-        if (heroSection && plxBack && plxFront && heroRecord) {
+        if (heroSection && heroRecord) {
           const heroH = heroSection.offsetHeight
           const p = Math.min(1, Math.max(0, scrollY / (heroH * 0.85)))
-          const wordShift = p * -36
           const recShift = p * 48
-          const tWord = 'translate3d(0, calc(0.10em + ' + wordShift + 'px), 0)'
-          plxBack.style.transform = tWord
-          plxFront.style.transform = tWord
           heroRecord.style.transform = 'translate3d(0, ' + recShift + 'px, 0)'
         }
 
@@ -288,7 +323,7 @@ export default function App() {
             href="#overview"
             className="font-display font-extrabold text-[16px] tracking-[-0.035em] text-ink leading-none"
           >
-            plx<span className="text-signal">.</span>
+            plx<span className="text-spotify-text">.</span>
           </a>
           <nav className="hidden lg:flex items-center gap-7" aria-label="Primary">
             <a href="#overview" className="nav-link meta text-secondary">Overview</a>
@@ -336,7 +371,7 @@ export default function App() {
           <h1 className="mt-5 font-extrabold text-[clamp(34px,5.1vw,74px)] leading-[0.92] tracking-[-0.045em] text-ink reveal reveal-d2">
             Move your playlist.
             <br />
-            <span className="text-signal">No dev account.</span>
+            <span className="text-spotify-text">No dev account.</span>
           </h1>
           <p className="mt-7 max-w-[38ch] text-[15px] md:text-[16px] leading-[1.55] text-secondary font-medium tracking-[-0.01em] reveal reveal-d3">
             plx moves playlists between Spotify, Deezer, and YouTube Music using your own browser
@@ -344,22 +379,16 @@ export default function App() {
           </p>
           <div className="mt-8 flex flex-wrap items-center gap-3 reveal reveal-d4">
             <CopyInstallPill size="sm" scrollToId="install" />
-            <a
-              href="#convert"
-              className="pill meta h-11 px-5 border border-[rgba(13,13,15,.18)] bg-stage text-ink hover:border-signal hover:text-signal"
-            >
-              Try --dry-run
-            </a>
           </div>
           <div className="mt-10 pt-5 border-t hairline space-y-2 reveal reveal-d5">
             <p className="meta-sm text-muted">
-              <span className="text-signal">Read</span> — any provider · anonymous
+              <span className="text-spotify-text">Read</span> — any provider · anonymous
             </p>
             <p className="meta-sm text-muted">
-              <span className="text-signal">Write</span> — one cookie per provider
+              <span className="text-spotify-text">Write</span> — one cookie per provider
             </p>
             <p className="meta-sm text-muted">
-              <span className="text-signal">Report</span> — CSV · per-track method
+              <span className="text-spotify-text">Report</span> — CSV · per-track method
             </p>
           </div>
         </div>
@@ -368,13 +397,6 @@ export default function App() {
         {/* pinned edge metadata */}
         <div className="absolute top-[5.5rem] right-5 md:right-8 z-10 hidden xl:block pointer-events-none">
           <p className="meta-sm text-muted text-right">0.1.1 · cli</p>
-        </div>
-
-        {/* WORDMARK BACK (p, l) */}
-        <div className="plx-word plx-back" id="plx-back" aria-hidden="true">
-          <span className="letter">p</span>
-          <span className="letter">l</span>
-          <span className="letter letter-hidden">x</span>
         </div>
 
         {/* RECORD */}
@@ -388,13 +410,6 @@ export default function App() {
           draggable={false}
         />
 
-        {/* WORDMARK FRONT (x only) */}
-        <div className="plx-word plx-front" id="plx-front" aria-hidden="true">
-          <span className="letter letter-hidden">p</span>
-          <span className="letter letter-hidden">l</span>
-          <span className="letter">x</span>
-        </div>
-
         <div className="absolute bottom-5 left-5 md:left-8 z-[4] pointer-events-none">
           <p className="meta-sm text-muted">01 / overview</p>
         </div>
@@ -405,7 +420,7 @@ export default function App() {
         <div className="max-w-[1440px] mx-auto px-5 md:px-8 py-20 md:py-28 lg:py-32">
           <div className="flex items-start justify-between gap-6 mb-12 md:mb-16">
             <p className="meta text-[rgba(239,239,238,0.55)] reveal">02 / proof</p>
-            <p className="meta text-lift reveal">measured · same playlist</p>
+            <p className="meta text-deezer-lift reveal">measured · same playlist</p>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-14 lg:gap-16 items-end">
@@ -424,12 +439,12 @@ export default function App() {
                 <span className="font-extrabold tabular-nums text-[clamp(56px,9vw,132px)] leading-[0.78] tracking-[-0.055em] text-ground">
                   19/19
                 </span>
-                <span className="meta text-lift pb-2 md:pb-3">Tracks</span>
+                <span className="meta text-deezer-lift pb-2 md:pb-3">Tracks</span>
               </div>
 
               <div className="mt-8 pt-5 border-t border-[rgba(239,239,238,0.12)] space-y-2 reveal reveal-d3">
                 <p className="meta-sm text-[rgba(239,239,238,0.55)]">
-                  <span className="text-lift">Free-text</span> — 19 matched · flat trace
+                  <span className="text-deezer-lift">Free-text</span> — 19 matched · flat trace
                 </p>
                 <p className="meta-sm text-[rgba(239,239,238,0.55)]">
                   <span className="text-[rgba(239,239,238,0.55)]">Field syntax</span> — 9 matched ·
@@ -466,7 +481,7 @@ export default function App() {
                 />
                 <path
                   d={toPath(freeY)}
-                  stroke="#7C97FF"
+                  stroke="#A947FF"
                   strokeWidth="2"
                   fill="none"
                   strokeLinecap="square"
@@ -481,12 +496,12 @@ export default function App() {
                   cx={PAD.l + IW}
                   cy={PAD.t + IH * (1 - freeY(N - 1))}
                   r="3.5"
-                  fill="#7C97FF"
+                  fill="#A947FF"
                 />
               </svg>
               <div className="mt-4 flex items-center gap-6">
                 <p className="meta-sm flex items-center gap-2 text-[rgba(239,239,238,0.5)]">
-                  <span className="inline-block w-3 h-px bg-lift" /> Free text 19/19
+                  <span className="inline-block w-3 h-px bg-deezer-lift" /> Free text 19/19
                 </p>
                 <p className="meta-sm flex items-center gap-2 text-[rgba(239,239,238,0.5)]">
                   <span className="inline-block w-3 h-px bg-[rgba(239,239,238,0.35)]" /> Field
@@ -521,7 +536,7 @@ export default function App() {
               <dl className="mt-12 reveal reveal-d2">
                 <div className="def-row py-4 flex items-baseline justify-between gap-4">
                   <div className="min-w-0">
-                    <dt className="meta text-signal-text">registry.ts</dt>
+                    <dt className="meta text-spotify-text">registry.ts</dt>
                     <dd className="mt-1 text-[14px] text-secondary font-medium tracking-[-0.01em]">
                       One provider spec per service. Add a provider here, not a new code path.
                     </dd>
@@ -530,7 +545,11 @@ export default function App() {
                 </div>
                 <div className="def-row py-4 flex items-baseline justify-between gap-4">
                   <div className="min-w-0">
-                    <dt className="meta text-signal-text">spotify.ts · deezer.ts · ytmusic.ts</dt>
+                    <dt className="meta">
+                      <span className="text-spotify-text">spotify.ts</span> ·{' '}
+                      <span className="text-deezer-text">deezer.ts</span> ·{' '}
+                      <span className="text-ytm-text">ytmusic.ts</span>
+                    </dt>
                     <dd className="mt-1 text-[14px] text-secondary font-medium tracking-[-0.01em]">
                       Three implementations of one Provider interface — read, search, write — over
                       your browser session, no API keys.
@@ -540,7 +559,7 @@ export default function App() {
                 </div>
                 <div className="def-row py-4 flex items-baseline justify-between gap-4">
                   <div className="min-w-0">
-                    <dt className="meta text-signal-text">conversion.ts</dt>
+                    <dt className="meta text-spotify-text">conversion.ts</dt>
                     <dd className="mt-1 text-[14px] text-secondary font-medium tracking-[-0.01em]">
                       Source and target are parameters, so six directions run one path. Verifies
                       matches, emits CSV.
@@ -550,7 +569,7 @@ export default function App() {
                 </div>
                 <div className="def-row py-4 flex items-baseline justify-between gap-4 border-b hairline">
                   <div className="min-w-0">
-                    <dt className="meta text-signal-text">matcher.ts</dt>
+                    <dt className="meta text-spotify-text">matcher.ts</dt>
                     <dd className="mt-1 text-[14px] text-secondary font-medium tracking-[-0.01em]">
                       Four tiers: exact, fuzzy-duration (±3s), fuzzy-title, video.
                     </dd>
@@ -595,9 +614,9 @@ export default function App() {
                 </g>
 
                 <g>
-                  <circle cx="340" cy="160" r="5" fill="#2F5BFF" />
-                  <circle cx="340" cy="240" r="5" fill="#2F5BFF" />
-                  <circle cx="420" cy="240" r="5" fill="#2F5BFF" />
+                  <circle cx="340" cy="160" r="5" fill="#137B38" />
+                  <circle cx="340" cy="240" r="5" fill="#137B38" />
+                  <circle cx="420" cy="240" r="5" fill="#137B38" />
                 </g>
 
                 <g className="pipe-leader">
@@ -619,9 +638,9 @@ export default function App() {
                   <text x="70" y="48">CLI args</text>
                   <text x="256" y="164">source read</text>
                   <text x="256" y="176" fill="#43444A">read · any provider</text>
-                  <text x="348" y="112" fill="#2F5BFF">exact</text>
-                  <text x="348" y="292" fill="#2F5BFF">fuzzy-dur</text>
-                  <text x="460" y="206" fill="#2F5BFF">fuzzy-title</text>
+                  <text x="348" y="112" fill="#137B38">exact</text>
+                  <text x="348" y="292" fill="#137B38">fuzzy-dur</text>
+                  <text x="460" y="206" fill="#137B38">fuzzy-title</text>
                   <text x="476" y="324">target write</text>
                   <text x="40" y="400">CSV report · per-track method</text>
                 </g>
@@ -808,12 +827,7 @@ export default function App() {
             </div>
             <div className="flex flex-wrap gap-3 reveal reveal-d2">
               <CopyInstallPill size="lg" />
-              <a
-                href="#convert"
-                className="pill meta h-12 px-6 border border-[rgba(13,13,15,.18)] text-ink hover:border-signal hover:text-signal"
-              >
-                plx --dry-run
-              </a>
+              <CopyInstallPill size="lg" command={DRY_RUN} outline />
             </div>
           </div>
 

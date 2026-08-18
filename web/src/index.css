@@ -6,11 +6,23 @@
   --color-ink: #0D0D0F;
   --color-secondary: #43444A;
   --color-muted: #5F6067;
-  --color-signal: #2F5BFF;
-  --color-signal-text: #2950E0;
-  --color-lift: #7C97FF;
 
-  --font-display: 'Archivo', sans-serif;
+  /* Generic accent: Spotify green (true hue for solid fills, paired with
+     text-ink; darker -text variant for text/borders on light backgrounds,
+     where the true hue fails AA contrast). */
+  --color-spotify: #1DB954;
+  --color-spotify-text: #137B38;
+
+  /* Deezer purple: scoped to the Proof section (its field-syntax finding is
+     Deezer-specific) and the deezer.ts label. -text for light backgrounds,
+     -lift for the dark Proof section background. */
+  --color-deezer-text: #8800FF;
+  --color-deezer-lift: #A947FF;
+
+  /* YouTube Music red: scoped to the ytmusic.ts label. */
+  --color-ytm-text: #DB0000;
+
+  --font-display: 'Bricolage Grotesque Variable', sans-serif;
   --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
 
   --ease-out-expo: cubic-bezier(.16, 1, .3, 1);
@@ -67,7 +79,7 @@ html {
 }
 
 .nav-link:hover {
-  border-bottom-color: var(--color-signal);
+  border-bottom-color: var(--color-spotify-text);
   color: var(--color-ink);
 }
 
@@ -85,42 +97,6 @@ html {
 .hero-stage {
   isolation: isolate;
   overflow: clip;
-}
-
-.plx-word {
-  position: absolute;
-  left: -2.5%;
-  bottom: 0;
-  width: 105%;
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-end;
-  font-family: var(--font-display);
-  font-weight: 900;
-  font-size: clamp(88px, 20.5vw, 304px);
-  line-height: 0.74;
-  letter-spacing: -0.055em;
-  color: var(--color-ink);
-  pointer-events: none;
-  user-select: none;
-  will-change: transform;
-  transform: translate3d(0, 0.1em, 0);
-}
-
-.plx-word .letter {
-  display: block;
-}
-
-.plx-word .letter-hidden {
-  visibility: hidden;
-}
-
-.plx-back {
-  z-index: 1;
-}
-
-.plx-front {
-  z-index: 3;
 }
 
 .hero-record {
@@ -155,13 +131,11 @@ html {
 .js .reveal-d4 { transition-delay: 0.32s; }
 .js .reveal-d5 { transition-delay: 0.4s; }
 
-.js .plx-word,
 .js .hero-record {
   opacity: 0;
   transition: opacity 1.1s var(--ease-out-expo);
 }
 
-.js .plx-word.shown,
 .js .hero-record.shown {
   opacity: 1;
 }
@@ -187,7 +161,7 @@ html {
   z-index: 1;
   white-space: nowrap;
   font-family: var(--font-display);
-  font-weight: 900;
+  font-weight: 800;
   font-size: clamp(78px, 17vw, 250px);
   line-height: 0.8;
   letter-spacing: -0.05em;
@@ -277,7 +251,7 @@ html {
 /* Close brand crop */
 .close-brand {
   font-family: var(--font-display);
-  font-weight: 900;
+  font-weight: 800;
   font-size: clamp(84px, 19.5vw, 300px);
   line-height: 0.74;
   letter-spacing: -0.055em;
@@ -297,6 +271,40 @@ html {
 /* Definition list */
 .def-row {
   border-top: 1px solid var(--hairline);
+}
+
+/* Copy toast — cursor-adjacent feedback */
+.copy-toast {
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 100;
+  pointer-events: none;
+  padding: 6px 10px;
+  background: var(--color-spotify);
+  color: var(--color-ink);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 400;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  line-height: 1;
+  white-space: nowrap;
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity 0.18s var(--ease-out-expo), transform 0.18s var(--ease-out-expo);
+}
+
+.copy-toast--show {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .copy-toast {
+    transition: opacity 0.18s var(--ease-out-expo);
+    transform: none;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
