@@ -7,6 +7,8 @@ const NPM = 'https://www.npmjs.com/package/plx-converter'
 const DOCS = 'https://github.com/samlehoy/plx/tree/master/docs'
 const ARL_GUIDE = 'https://github.com/samlehoy/plx/blob/master/docs/CONFIG.md#getting-the-cookies'
 const NODEJS = 'https://nodejs.org'
+const SAWERIA = 'https://saweria.co/eleonorez'
+const KOFI = 'https://ko-fi.com/eleonorez'
 
 type Tier = {
   id: string
@@ -137,15 +139,15 @@ let toastEl: HTMLDivElement | null = null
 let toastTimer: number | undefined
 let toastMove: ((e: PointerEvent) => void) | null = null
 
-function showCopyToast(x: number, y: number) {
+function showCopyToast(x: number, y: number, message = 'Copied') {
   const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches
   if (!toastEl) {
     toastEl = document.createElement('div')
     toastEl.className = 'copy-toast'
-    toastEl.textContent = 'Copied'
     toastEl.setAttribute('aria-hidden', 'true')
     document.body.appendChild(toastEl)
   }
+  toastEl.textContent = message
   const place = (px: number, py: number) => {
     toastEl!.style.left = `${px + 14}px`
     toastEl!.style.top = `${py - 34}px`
@@ -168,17 +170,23 @@ function showCopyToast(x: number, y: number) {
 
 function CopyInstallPill({ size, scrollToId, command = INSTALL, outline }: { size: 'sm' | 'lg'; scrollToId?: string; command?: string; outline?: boolean }) {
   const [copied, setCopied] = useState(false)
+  const [failed, setFailed] = useState(false)
   const timeoutRef = useRef<number | undefined>(undefined)
 
   useEffect(() => () => window.clearTimeout(timeoutRef.current), [])
 
   const handleClick = async (e: MouseEvent<HTMLButtonElement>) => {
     const ok = await copyToClipboard(command)
+    window.clearTimeout(timeoutRef.current)
     if (ok) {
       setCopied(true)
-      window.clearTimeout(timeoutRef.current)
+      setFailed(false)
       timeoutRef.current = window.setTimeout(() => setCopied(false), 1400)
       showCopyToast(e.clientX, e.clientY)
+    } else {
+      setFailed(true)
+      timeoutRef.current = window.setTimeout(() => setFailed(false), 1400)
+      showCopyToast(e.clientX, e.clientY, 'Select & copy manually')
     }
     if (scrollToId) {
       const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches
@@ -204,7 +212,7 @@ function CopyInstallPill({ size, scrollToId, command = INSTALL, outline }: { siz
     >
       {command}
       <span className="sr-only" role="status">
-        {copied ? 'Command copied to clipboard' : ''}
+        {copied ? 'Command copied to clipboard' : failed ? 'Copy failed — select the command text manually' : ''}
       </span>
     </button>
   )
@@ -332,6 +340,7 @@ export default function App() {
             <a href="#spec" className="nav-link meta text-secondary">Spec</a>
             <a href="#install" className="nav-link meta text-secondary">Install</a>
             <a href={GITHUB} target="_blank" rel="noreferrer" className="nav-link meta text-secondary">Github</a>
+            <a href="#support" className="pill meta h-8 px-4 bg-ink text-ground hover:bg-spotify hover:text-ink transition-colors">Support</a>
           </nav>
           <div className="lg:hidden flex items-center gap-2">
             <details className="relative group">
@@ -353,6 +362,7 @@ export default function App() {
                 <a href="#spec" className="nav-link meta text-secondary py-1">Spec</a>
                 <a href="#install" className="nav-link meta text-secondary py-1">Install</a>
                 <a href={GITHUB} target="_blank" rel="noreferrer" className="nav-link meta text-secondary py-1">Github</a>
+                <a href="#support" className="nav-link meta text-spotify-text py-1">Support</a>
               </nav>
             </details>
           </div>
@@ -396,7 +406,7 @@ export default function App() {
 
         {/* pinned edge metadata */}
         <div className="absolute top-[5.5rem] right-5 md:right-8 z-10 hidden xl:block pointer-events-none">
-          <p className="meta-sm text-muted text-right">0.1.1 · cli</p>
+          <p className="meta-sm text-muted text-right">0.1.2 · cli</p>
         </div>
 
         {/* RECORD */}
@@ -860,9 +870,29 @@ export default function App() {
 
           <div className="mt-16 pt-5 border-t hairline flex flex-wrap items-center gap-x-8 gap-y-3 reveal reveal-d3">
             <a href={GITHUB} target="_blank" rel="noreferrer" className="meta text-muted hover:text-ink transition-colors">Github</a>
-            <a href={NPM} className="meta text-muted hover:text-ink transition-colors">Npm</a>
-            <a href={DOCS} className="meta text-muted hover:text-ink transition-colors">Docs</a>
+            <a href={NPM} target="_blank" rel="noreferrer" className="meta text-muted hover:text-ink transition-colors">Npm</a>
+            <a href={DOCS} target="_blank" rel="noreferrer" className="meta text-muted hover:text-ink transition-colors">Docs</a>
             <span className="meta text-muted lg:ml-auto">© plx · local-first · no telemetry</span>
+          </div>
+
+          <div id="support" className="mt-6 pt-5 border-t hairline flex flex-wrap items-center gap-3 reveal reveal-d3">
+            <p className="meta text-muted mr-1">Support</p>
+            <a
+              href={SAWERIA}
+              target="_blank"
+              rel="noreferrer"
+              className="pill meta h-9 px-4 bg-ink text-ground hover:bg-spotify hover:text-ink transition-colors"
+            >
+              Saweria
+            </a>
+            <a
+              href={KOFI}
+              target="_blank"
+              rel="noreferrer"
+              className="pill meta h-9 px-4 border border-[rgba(13,13,15,.18)] text-ink hover:border-spotify-text hover:text-spotify-text transition-colors"
+            >
+              Ko-fi
+            </a>
           </div>
         </div>
 
