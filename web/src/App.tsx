@@ -841,13 +841,8 @@ export default function App() {
             </div>
           </div>
 
-          <details className="mt-10 pt-5 border-t hairline reveal reveal-d2 group">
-            <summary className="meta text-secondary cursor-pointer select-none hover:text-ink flex items-center gap-2 [&::-webkit-details-marker]:hidden">
-              <span className="inline-block transition-transform duration-300 group-open:rotate-90">
-                →
-              </span>
-              New to the command line? Four steps.
-            </summary>
+          <div className="mt-10 pt-5 border-t hairline reveal reveal-d2">
+            <p className="meta text-secondary">New to the command line? Five steps.</p>
             <ol className="mt-5 max-w-xl space-y-3 pl-5 list-decimal list-outside text-[14px] md:text-[15px] leading-[1.5] text-secondary font-medium tracking-[-0.01em]">
               <li>
                 Install{' '}
@@ -865,8 +860,12 @@ export default function App() {
                 Run <span className="meta-sm text-ink whitespace-nowrap">plx --version</span> —
                 if it prints a version number, the install worked.
               </li>
+              <li>
+                Run <span className="meta-sm text-ink whitespace-nowrap">plx</span> — it asks for
+                the playlist link and where to send it, then converts. No flags to memorize.
+              </li>
             </ol>
-          </details>
+          </div>
 
           <div className="mt-16 pt-5 border-t hairline flex flex-wrap items-center gap-x-8 gap-y-3 reveal reveal-d3">
             <a href={GITHUB} target="_blank" rel="noreferrer" className="meta text-muted hover:text-ink transition-colors">Github</a>
