@@ -66,17 +66,24 @@ dozen-odd cookies, so copy the entire `cookie:` value: on [music.youtube.com](ht
 DevTools → **Network** → any request → **Request Headers** → `cookie:`. Google sessions also expire
 faster than the other two, so expect to redo this occasionally.
 
-### Auto-fetch from your browser (macOS)
+### Auto-fetch from your browser
 
-Rather than copying cookies by hand, plx can read them straight from a logged-in browser — you only
-accept the macOS Keychain prompt. Pick **"Auto-fetch credentials (from browser)"** from the menu, or
-let it run automatically when a credential is missing. Works with the Chromium family (Brave, Chrome,
-Edge, Chromium, Vivaldi, Opera) and Safari (needs Full Disk Access). Manual paste stays the fallback
-everywhere else.
+Rather than copying cookies by hand, plx can read them straight from a logged-in browser. Pick
+**"Auto-fetch credentials (from browser)"** from the menu, or let it run automatically when a
+credential is missing. Manual paste stays the fallback everywhere.
 
-**Windows and Linux:** plx itself runs fine — every conversion works the same. Only this auto-fetch
-shortcut is macOS-only, so paste the cookies once as described above and they're stored like any
-other credential.
+| Browser | macOS | Windows | Linux |
+|---|---|---|---|
+| Firefox | ✅ | ✅ | ✅ |
+| Chromium family (Brave, Chrome, Edge, Chromium, Vivaldi, Opera) | ✅ | — | — |
+| Safari | ✅ — needs Full Disk Access | — | — |
+
+On macOS the Chromium and Safari backends ask you to accept the Keychain prompt once. Firefox needs
+no prompt on any OS, since it stores cookie values unencrypted.
+
+Chromium on Windows isn't a gap waiting to be filled: since Chrome 127 the cookie key is sealed
+behind App-Bound Encryption that only a SYSTEM-level process can unwrap, and every published
+workaround is the sort of thing malware does. On Windows, use Firefox or paste manually.
 
 Set credentials in `.env`, export them in your shell, or paste when prompted. Full setup:
 [`docs/CONFIG.md`](docs/CONFIG.md).
