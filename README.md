@@ -74,6 +74,10 @@ let it run automatically when a credential is missing. Works with the Chromium f
 Edge, Chromium, Vivaldi, Opera) and Safari (needs Full Disk Access). Manual paste stays the fallback
 everywhere else.
 
+**Windows and Linux:** plx itself runs fine — every conversion works the same. Only this auto-fetch
+shortcut is macOS-only, so paste the cookies once as described above and they're stored like any
+other credential.
+
 Set credentials in `.env`, export them in your shell, or paste when prompted. Full setup:
 [`docs/CONFIG.md`](docs/CONFIG.md).
 
