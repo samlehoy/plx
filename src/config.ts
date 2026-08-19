@@ -20,9 +20,13 @@ const LEGACY_KEYS = ['deezerArl', 'spotifyDc'];
 
 type Stored = { credentials?: Record<string, string>; recentUrls?: string[] } & Record<string, unknown>;
 
+// XDG_CONFIG_HOME wins on every platform, Windows included: it is the explicit override, and a
+// Windows-only branch that ignored it left the tests sharing one real %APPDATA% dir instead of a
+// temp dir each, so state leaked between them.
 export function configDir(): string {
+  if (process.env.XDG_CONFIG_HOME) return join(process.env.XDG_CONFIG_HOME, 'plx');
   if (platform() === 'win32') return join(process.env.APPDATA ?? join(homedir(), 'AppData', 'Roaming'), 'plx');
-  return join(process.env.XDG_CONFIG_HOME ?? join(homedir(), '.config'), 'plx');
+  return join(homedir(), '.config', 'plx');
 }
 
 const file = () => join(configDir(), 'credentials.json');
