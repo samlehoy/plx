@@ -1,18 +1,21 @@
 import { createDecipheriv, pbkdf2Sync } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
-import { existsSync, readFileSync } from 'node:fs';
-import { homedir, platform } from 'node:os';
+import { copyFileSync, existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync } from 'node:fs';
+import { homedir, platform, tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { YTMUSIC_COOKIES, cookieHeader } from './ytmusic.js';
 
 // Read the Deezer `arl` / Spotify `sp_dc` cookies from an already-logged-in
 // browser session so the user only has to accept the OS keychain permission.
-// macOS only for now. Two backends:
+// Three backends, two of them macOS-only:
 //   - Chromium family (Brave/Chrome/Edge/Chromium/…) — SQLite cookie DB, values
-//     AES-128-CBC encrypted under a key held in the login Keychain.
+//     AES-128-CBC encrypted under a key held in the login Keychain. macOS only,
+//     and deliberately so: see the Windows note on `readFirefox` below.
 //   - Safari — `Cookies.binarycookies`, plaintext (no encryption) but TCC-gated
-//     (requires Full Disk Access, not just a keychain "Allow").
+//     (requires Full Disk Access, not just a keychain "Allow"). macOS only.
+//   - Firefox — `cookies.sqlite`, plaintext on every OS. The only backend that
+//     works on Windows and Linux.
 
 // Cookie name → value, for every cookie plx cares about that a browser happened to have. Kept in
 // cookie terms; the mapping to one credential per provider happens in fetchBrowserCredentials.
@@ -171,16 +174,74 @@ function readSafari(): BrowserCredentials {
   return {};
 }
 
+// Firefox — the one backend that is not macOS-only. `cookies.sqlite` stores values in **plaintext**:
+// no keychain, no DPAPI, and none of the App-Bound Encryption that closed the Chromium family off on
+// Windows (Chrome 127+ wraps the cookie key in SYSTEM-DPAPI, so only a SYSTEM process can unwrap it,
+// and every published bypass is malware behaviour). `key4.db` is commonly assumed to encrypt these
+// too — it does not; it protects saved *logins*.
+const FIREFOX_ROOTS: Record<string, string> = {
+  win32: join(process.env.APPDATA ?? join(homedir(), 'AppData', 'Roaming'), 'Mozilla', 'Firefox'),
+  darwin: join(homedir(), 'Library', 'Application Support', 'Firefox'),
+  linux: join(homedir(), '.mozilla', 'firefox'),
+};
+
+// Every profile holding a cookie DB, most-recently-written first. `profiles.ini` names the default
+// one, but reading it needs an INI parser to answer worse than an mtime sort already does: someone
+// with several profiles is logged in on the one they actually use, which is the one just written to.
+export function firefoxProfiles(root: string = FIREFOX_ROOTS[platform()] ?? FIREFOX_ROOTS.linux): string[] {
+  const nested = join(root, 'Profiles');
+  const base = existsSync(nested) ? nested : root; // some Linux packagings drop the Profiles/ level
+  try {
+    return readdirSync(base, { withFileTypes: true })
+      .filter((entry) => entry.isDirectory())
+      .map((entry) => join(base, entry.name, 'cookies.sqlite'))
+      .filter(existsSync)
+      .sort((a, b) => statSync(b).mtimeMs - statSync(a).mtimeMs);
+  } catch {
+    return []; // no Firefox installed, or an unreadable profile root
+  }
+}
+
+// Firefox keeps the DB in WAL mode and holds it open while running — on Windows that lock is
+// enforced, so reading the file in place fails outright. Copy it to a temp dir and read the copy.
+// The `-wal` sidecar comes along because a cookie set this session may not be checkpointed into the
+// main file yet, and the copy is opened writable precisely so SQLite is allowed to replay it.
+export function readFirefox(dbPath: string): BrowserCredentials {
+  let dir: string | null = null;
+  try {
+    dir = mkdtempSync(join(tmpdir(), 'plx-ff-'));
+    const copy = join(dir, 'cookies.sqlite');
+    copyFileSync(dbPath, copy);
+    if (existsSync(`${dbPath}-wal`)) copyFileSync(`${dbPath}-wal`, `${copy}-wal`);
+    const db = new DatabaseSync(copy);
+    try {
+      const query = `SELECT name, host, value FROM moz_cookies WHERE name IN (${COOKIE_NAMES.map(() => '?').join(',')})`;
+      // `host` is stored dot-prefixed for domain cookies (`.youtube.com`); hostRank's endsWith arm
+      // already accepts that, so it is passed through as-is.
+      return collect(db.prepare(query).all(...COOKIE_NAMES) as Array<{ name: string; host: string; value: string }>);
+    } finally {
+      db.close();
+    }
+  } catch {
+    return {}; // unreadable profile / changed schema — skip it
+  } finally {
+    if (dir) rmSync(dir, { recursive: true, force: true });
+  }
+}
+
 // Auto-retrieve credentials from the first logged-in browser that has them, keyed by provider —
 // the parsers above speak in cookie names, and this is where that becomes one opaque string per
 // provider for the config layer to store. Never throws: a missing browser, locked DB, denied
 // keychain, or TCC block just yields {}. Manual paste stays the fallback.
 export function fetchBrowserCredentials(): Record<string, string> {
-  if (platform() !== 'darwin') return {};
+  // The keychain-backed backends stay gated on macOS; Firefox runs everywhere and is all that
+  // Windows and Linux get. macOS keeps its original order, so nothing changes for anyone who
+  // already relied on this — Firefox only fills what the others left empty.
+  const keychainBacked = platform() === 'darwin' ? [...CHROMIUM_BROWSERS.map(readChromium), readSafari()] : [];
   const credentials: Record<string, string> = {};
   // Every backend is read rather than stopping at the first: a user may be logged into Deezer in one
   // browser and YouTube Music in another.
-  for (const found of [...CHROMIUM_BROWSERS.map(readChromium), readSafari()]) {
+  for (const found of [...keychainBacked, ...firefoxProfiles().map(readFirefox)]) {
     if (!credentials.deezer && found.arl) credentials.deezer = found.arl;
     if (!credentials.spotify && found.sp_dc) credentials.spotify = found.sp_dc;
     // A cookie bundle is only a session as a *set* from one profile, so it is built per browser and

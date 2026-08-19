@@ -182,7 +182,7 @@ Verified live this session:
 - Dedupe on write: existing-track skip + **in-batch duplicate removal** (`[...new Set(ids)]`). Deezer rejects any chunk containing a repeated id (`PlaylistAddTracksError { isNotAllowed }`).
 - Existing-playlist target: `listPlaylists` (GetUserPlaylists) + paste link (`resolveDeezerPlaylistId` follows `link.deezer.com/s/…` shortlinks).
 
-## Semi-auto credential fill (macOS: Chromium family + Safari) — DONE (2026-08-13)
+## Semi-auto credential fill (Chromium family + Safari + Firefox) — DONE (2026-08-13, Firefox 2026-08-19)
 
 Instead of fully manual copy-paste, the ARL / `sp_dc` inputs now try to **read the
 cookie from a logged-in browser session** first — the user only has to accept the
@@ -200,29 +200,41 @@ OS permission dialog — and fall back to manual paste if nothing is found.
   Parser mirrors `browser_cookie3` (`cook` magic + big-endian page table, then
   little-endian cookie records with null-terminated strings at record-relative
   offsets).
+- **Firefox** — the only backend that is not macOS-only, and the cheapest of the
+  three. `cookies.sqlite` stores values in **plaintext** on every OS: no keychain,
+  no DPAPI, no permission dialog. (`key4.db` is widely assumed to encrypt these —
+  it does not, it protects saved *logins*.) Two things it does need:
+  - Profile discovery sorts candidate `cookies.sqlite` files by **mtime**, newest
+    first, rather than parsing `profiles.ini`. Someone with several profiles is
+    logged in on the one they last wrote to, which is the question `profiles.ini`
+    answers less directly.
+  - The DB is WAL-mode and held open by a running Firefox — on Windows that lock
+    is enforced and reading in place fails. It is copied to a temp dir with its
+    `-wal` sidecar (a cookie set this session may not be checkpointed yet) and the
+    copy is opened **writable**, because replaying a WAL requires write access.
 - Wired into `ensureDeezer`/`ensureSpotify` + the `arl`/`sp_dc` settings entries via
   `tryAutoFillCredentials(cfg)` — additive: env vars and stored credentials win,
-  manual paste stays the fallback. First use pops the macOS Keychain "Allow" dialog.
+  manual paste stays the fallback. On macOS the two keychain-backed backends run
+  first and keep their original order, so nothing changed for existing users;
+  Firefox only fills what they left empty.
 
-Out of scope, with the reasons — these are not all equally hard:
+**Not verified live.** Firefox was not installed on the development machine, so the
+backend is covered by tests against a real `cookies.sqlite` built by `node:sqlite`
+— schema, host ranking, ordering and the failure paths — but has never been run
+against a genuine logged-in profile. First real Firefox user is the actual test.
 
-- **Windows, Chromium family — treat as closed, not merely unimplemented.** Plain
-  DPAPI only ever covered Chrome < 127. Since Chrome 127 (July 2024) App-Bound
-  Encryption stores cookies as `v20` blobs whose key is wrapped by User-DPAPI and
-  then SYSTEM-DPAPI, so only a SYSTEM process or `elevation_service.exe` can
-  unwrap it — the feature exists specifically to stop what this module does. Every
-  published bypass is COM hijacking or injection into the elevation service, which
-  is malware behaviour and would get plx flagged as an infostealer. Do not ship it.
-- **Linux, Chromium family** — libsecret/kwallet. Unimplemented, not blocked.
-- **Firefox — the actually cheap one, and the note it replaces was wrong.**
-  `key4.db` protects saved *logins*, not cookies; `cookies.sqlite` stores cookie
-  values in **plaintext** on every OS. No DPAPI, no App-Bound Encryption, and it
-  reuses the `node:sqlite` import already here. One backend would cover Windows,
-  macOS and Linux at once. Gotchas: profile discovery via `profiles.ini`, and the
-  DB is WAL-mode and held open by the browser, so copy it (plus `-wal`) to a temp
-  file rather than relying on `readOnly: true`.
+Still out of scope, and the two reasons are not equivalent:
 
-If auto-fetch on Windows is ever asked for, Firefox is the answer; Chromium is not.
+- **Windows, Chromium family — closed, not merely unimplemented.** Plain DPAPI only
+  ever covered Chrome < 127. Since Chrome 127 (July 2024) App-Bound Encryption
+  stores cookies as `v20` blobs whose key is wrapped by User-DPAPI and then
+  SYSTEM-DPAPI, so only a SYSTEM process or `elevation_service.exe` can unwrap it —
+  the feature exists specifically to stop what this module does. Every published
+  bypass is COM hijacking or injection into the elevation service, which is malware
+  behaviour and would get plx flagged as an infostealer. Do not ship it. Firefox is
+  the answer on Windows.
+- **Linux, Chromium family** — libsecret/kwallet. Unimplemented, not blocked; worth
+  doing only if someone actually asks, since Firefox already covers Linux.
 
 ## Deezer → Spotify (WORKING — verified live)
 

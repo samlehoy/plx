@@ -1,6 +1,10 @@
 import { createCipheriv, pbkdf2Sync } from 'node:crypto';
+import { mkdirSync, mkdtempSync, utimesSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { DatabaseSync } from 'node:sqlite';
 import { describe, expect, it } from 'vitest';
-import { decryptCookie, parseSafariCookies } from '../src/browser.js';
+import { decryptCookie, firefoxProfiles, parseSafariCookies, readFirefox } from '../src/browser.js';
 import { cookieHeader } from '../src/ytmusic.js';
 
 const key = pbkdf2Sync('test-password', 'saltysalt', 1003, 16, 'sha1');
@@ -94,5 +98,83 @@ describe('parseSafariCookies', () => {
     ]));
     expect(found).toEqual({ SAPISID: 'sap', SID: 'sid', HSID: 'hs', arl: 'arl-value' });
     expect(cookieHeader(found)).toBe('SAPISID=sap; SID=sid; HSID=hs');
+  });
+});
+
+// Firefox needs no encryption fixture at all — that is the whole point of the backend. The schema plx
+// touches is three columns of `moz_cookies`, and node:sqlite writes a DB as readily as it reads one,
+// so these run against a real database file rather than a stand-in for one.
+function firefoxDb(cookies: Array<{ host: string; name: string; value: string }>): string {
+  const path = join(mkdtempSync(join(tmpdir(), 'plx-ff-test-')), 'cookies.sqlite');
+  const db = new DatabaseSync(path);
+  db.exec('CREATE TABLE moz_cookies (id INTEGER PRIMARY KEY, name TEXT, value TEXT, host TEXT)');
+  const insert = db.prepare('INSERT INTO moz_cookies (name, value, host) VALUES (?, ?, ?)');
+  for (const { host, name, value } of cookies) insert.run(name, value, host);
+  db.close();
+  return path;
+}
+
+describe('readFirefox', () => {
+  it('reads plaintext cookies straight out of a profile DB', () => {
+    expect(readFirefox(firefoxDb([{ host: '.deezer.com', name: 'arl', value: 'abc123arl' }]))).toEqual({ arl: 'abc123arl' });
+  });
+
+  it('ignores a wanted cookie name served from the wrong host', () => {
+    expect(readFirefox(firefoxDb([{ host: '.evil.example', name: 'arl', value: 'nope' }]))).toEqual({});
+  });
+
+  it('feeds the same joiner the other two backends use', () => {
+    const found = readFirefox(firefoxDb([
+      { host: '.youtube.com', name: 'SAPISID', value: 'sap' },
+      { host: '.youtube.com', name: 'SID', value: 'sid' },
+      { host: '.google.com', name: 'HSID', value: 'hs' },
+    ]));
+    expect(cookieHeader(found)).toBe('SAPISID=sap; SID=sid; HSID=hs');
+  });
+
+  // Google sets SID on both .google.com and .youtube.com with *different* values, and a bundle
+  // mixing the two authenticates as neither. Listed google-first so row order cannot mask a
+  // ranking that silently took whichever came back first.
+  it('prefers the .youtube.com copy of a cookie Google also set on .google.com', () => {
+    const found = readFirefox(firefoxDb([
+      { host: '.google.com', name: 'SID', value: 'google-copy' },
+      { host: '.youtube.com', name: 'SID', value: 'youtube-copy' },
+    ]));
+    expect(found.SID).toBe('youtube-copy');
+  });
+
+  it('returns nothing rather than throwing when the path is not a database', () => {
+    expect(readFirefox(join(tmpdir(), 'plx-nonexistent-profile.sqlite'))).toEqual({});
+  });
+});
+
+describe('firefoxProfiles', () => {
+  const profileDir = (base: string, name: string, mtime: number): string => {
+    mkdirSync(join(base, name), { recursive: true });
+    const db = join(base, name, 'cookies.sqlite');
+    writeFileSync(db, '');
+    utimesSync(db, mtime, mtime);
+    return db;
+  };
+
+  // Named so that alphabetical order is the *opposite* of mtime order: readdir yielding the right
+  // answer by luck would still fail this.
+  it('lists profiles holding a cookie DB, most recently written first', () => {
+    const root = mkdtempSync(join(tmpdir(), 'plx-ff-root-'));
+    const profiles = join(root, 'Profiles');
+    const stale = profileDir(profiles, 'aaa.default', 1_000);
+    const current = profileDir(profiles, 'zzz.default-release', 9_000);
+    mkdirSync(join(profiles, 'never-used'), { recursive: true }); // a profile that stored no cookies
+    expect(firefoxProfiles(root)).toEqual([current, stale]);
+  });
+
+  it('falls back to the root when a packaging omits the Profiles/ level', () => {
+    const root = mkdtempSync(join(tmpdir(), 'plx-ff-flat-'));
+    const db = profileDir(root, 'abcd1234.default', 5_000);
+    expect(firefoxProfiles(root)).toEqual([db]);
+  });
+
+  it('returns nothing when Firefox is not installed', () => {
+    expect(firefoxProfiles(join(tmpdir(), 'plx-no-firefox-here'))).toEqual([]);
   });
 });
