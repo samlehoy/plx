@@ -204,8 +204,25 @@ OS permission dialog — and fall back to manual paste if nothing is found.
   `tryAutoFillCredentials(cfg)` — additive: env vars and stored credentials win,
   manual paste stays the fallback. First use pops the macOS Keychain "Allow" dialog.
 
-Out of scope for now: Windows (DPAPI) / Linux (libsecret) cookie decrypt, and the
-Firefox key4.db/encryptedcookies format.
+Out of scope, with the reasons — these are not all equally hard:
+
+- **Windows, Chromium family — treat as closed, not merely unimplemented.** Plain
+  DPAPI only ever covered Chrome < 127. Since Chrome 127 (July 2024) App-Bound
+  Encryption stores cookies as `v20` blobs whose key is wrapped by User-DPAPI and
+  then SYSTEM-DPAPI, so only a SYSTEM process or `elevation_service.exe` can
+  unwrap it — the feature exists specifically to stop what this module does. Every
+  published bypass is COM hijacking or injection into the elevation service, which
+  is malware behaviour and would get plx flagged as an infostealer. Do not ship it.
+- **Linux, Chromium family** — libsecret/kwallet. Unimplemented, not blocked.
+- **Firefox — the actually cheap one, and the note it replaces was wrong.**
+  `key4.db` protects saved *logins*, not cookies; `cookies.sqlite` stores cookie
+  values in **plaintext** on every OS. No DPAPI, no App-Bound Encryption, and it
+  reuses the `node:sqlite` import already here. One backend would cover Windows,
+  macOS and Linux at once. Gotchas: profile discovery via `profiles.ini`, and the
+  DB is WAL-mode and held open by the browser, so copy it (plus `-wal`) to a temp
+  file rather than relying on `readOnly: true`.
+
+If auto-fetch on Windows is ever asked for, Firefox is the answer; Chromium is not.
 
 ## Deezer → Spotify (WORKING — verified live)
 
@@ -285,7 +302,7 @@ The hashes in `spotify.ts` (`ADD_TO_PLAYLIST_SHA`, `SEARCH_TRACKS_SHA`, `LIBRARY
 
 ## Release blockers
 
-1. ~~Push to GitHub~~ — done (`4ca1db5`). **Confirm the CI matrix passes** (ubuntu/macos/windows × node 22/24) — pending.
+1. ~~Push to GitHub~~ — done (`4ca1db5`). **CI matrix** (ubuntu/macos/windows × node 22/24): ubuntu and macos green; both **windows legs were red from the day the matrix landed** — `configDir()` ignored `XDG_CONFIG_HOME` on win32, so the per-test temp dirs collapsed onto one real `%APPDATA%\plx` and state leaked between cases (`config.test.ts:43`). Fixed on `fix/windows-config-dir`; confirm green there before merging.
 2. ~~Fix the Deezer → Spotify reverse flow~~ — done, verified live (see "Verified live" above).
 3. Publish `plx@0.1.0` to npm.
 
