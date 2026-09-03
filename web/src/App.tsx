@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type MouseEvent } from 'react'
 
 const INSTALL = 'npm i -g plx-converter'
-const DRY_RUN = 'plx --dry-run'
+const RUN = 'plx'
 const GITHUB = 'https://github.com/samlehoy/plx'
 const NPM = 'https://www.npmjs.com/package/plx-converter'
 const DOCS = 'https://github.com/samlehoy/plx/tree/master/docs'
@@ -835,9 +835,16 @@ export default function App() {
                 , stored locally, never sent anywhere else. Reads stay anonymous.
               </p>
             </div>
-            <div className="flex flex-wrap gap-3 reveal reveal-d2">
-              <CopyInstallPill size="lg" />
-              <CopyInstallPill size="lg" command={DRY_RUN} outline />
+            <div className="flex flex-col items-start lg:items-end gap-3 reveal reveal-d2">
+              <div className="flex flex-wrap gap-3">
+                <CopyInstallPill size="lg" />
+                <CopyInstallPill size="lg" command={RUN} outline />
+              </div>
+              <p className="meta-sm text-muted max-w-sm lg:text-right">
+                <span className="text-ink">plx</span> converts for real — add{' '}
+                <span className="text-ink whitespace-nowrap">--dry-run</span> to match every track
+                and write the CSV report without touching the target playlist.
+              </p>
             </div>
           </div>
 
