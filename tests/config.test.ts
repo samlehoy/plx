@@ -114,6 +114,14 @@ describe('browser auto-fill', () => {
     expect(credential(cfg, 'deezer')).toBe('browser-arl');
   });
 
+  it('overwrites only the named provider', async () => {
+    await storedFile({ credentials: { deezer: 'stored-arl', spotify: 'stored-dc' } });
+    browserFinds({ deezer: 'browser-arl', spotify: 'browser-dc' });
+    const cfg = await loadConfig();
+    expect(await tryAutoFillCredentials(cfg, true, 'spotify')).toEqual(['spotify']);
+    expect(credential(cfg, 'deezer')).toBe('stored-arl'); // the other providers are left alone
+  });
+
   it('does not touch the browser when every provider already has one', async () => {
     await storedFile({ credentials: { deezer: 'a', spotify: 'b', ytmusic: 'c' } });
     await tryAutoFillCredentials(await loadConfig());

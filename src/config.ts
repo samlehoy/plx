@@ -69,13 +69,15 @@ async function write(patch: Partial<Stored>): Promise<void> {
 // Semi-auto: fill credentials from a logged-in browser (pops the macOS Keychain "Allow" dialog on
 // first use), persist what's found, and return the provider names filled. By default only fills
 // providers with no credential yet (env vars and stored credentials win); pass overwrite=true to
-// refetch and replace. Never throws — a denied keychain / TCC block just fills nothing, and the
-// caller falls back to the manual paste prompt.
-export async function tryAutoFillCredentials(cfg: Config, overwrite = false): Promise<string[]> {
-  if (!overwrite && Object.keys(ENV_VAR).every((provider) => cfg.credentials[provider])) return [];
+// refetch and replace, and `only` to confine that to one provider — the Credentials menu refetches
+// the provider being edited without quietly replacing the other two. Never throws — a denied
+// keychain / TCC block just fills nothing, and the caller falls back to the manual paste prompt.
+export async function tryAutoFillCredentials(cfg: Config, overwrite = false, only?: string): Promise<string[]> {
+  const wanted = only ? [only] : Object.keys(ENV_VAR);
+  if (!overwrite && wanted.every((provider) => cfg.credentials[provider])) return [];
   const filled: string[] = [];
   for (const [provider, value] of Object.entries(fetchBrowserCredentials())) {
-    if (!value || (!overwrite && cfg.credentials[provider])) continue;
+    if (!value || !wanted.includes(provider) || (!overwrite && cfg.credentials[provider])) continue;
     cfg.credentials[provider] = value;
     filled.push(provider);
   }

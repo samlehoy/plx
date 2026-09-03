@@ -80,6 +80,7 @@ describe('the provider registry', () => {
       expect(p.matches.length).toBeGreaterThan(0);
       expect(p.credentialLabel).toBeTruthy();
       expect(p.credentialHint).toBeTruthy();
+      expect(p.credentialExample).toBeTruthy();
     }
   });
 });

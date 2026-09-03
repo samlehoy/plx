@@ -255,3 +255,17 @@ export function fetchBrowserCredentials(): Record<string, string> {
   }
   return credentials;
 }
+
+// Why auto-fetch came back empty, said in the terms of the platform the user is actually on. macOS
+// is the only place a denied Keychain prompt can be the answer; everywhere else Firefox is the only
+// backend, so the useful thing to report is which half of that is missing. This says *why* only —
+// the caller owns pointing at the manual paste, so that instruction lives in one place. Both inputs
+// are injected so the branches are testable without a browser or a second OS.
+export function autoFetchHint(os: string = platform(), firefoxFound = firefoxProfiles().length > 0): string {
+  if (os === 'darwin') return 'No browser was logged in, or the macOS Keychain prompt was denied.';
+  if (firefoxFound) return 'A Firefox profile was found but held none of the cookies — log in at the provider in Firefox and retry.';
+  const why = os === 'win32'
+    ? 'Chrome/Edge cookies are sealed by App-Bound Encryption that only a SYSTEM process can unwrap'
+    : 'the Chromium keyring backends are not implemented here';
+  return `Auto-fetch supports Firefox only on this OS and no Firefox profile was found — ${why}.`;
+}

@@ -16,6 +16,9 @@ export type ProviderSpec = {
   matches: string[];
   credentialLabel: string;
   credentialHint: string;
+  // What a correct value looks like, shown next to the manual paste prompt. A cookie pasted with its
+  // `name=` prefix, or half a YouTube bundle, is the most common way the manual path fails.
+  credentialExample: string;
   loginSite: string;
   // Whether this provider can read a playlist with no credential at all (so a dry run needs none).
   anonymousRead: boolean;
@@ -37,6 +40,7 @@ const spotify: ProviderSpec = {
   matches: ['open.spotify.com', 'spotify:playlist:'],
   credentialLabel: 'Spotify sp_dc',
   credentialHint: 'login open.spotify.com → F12 → Application → Cookies → sp_dc → copy value',
+  credentialExample: 'AQBv7pC3...9Kk  (the value only, ~150 chars, no "sp_dc=" prefix)',
   loginSite: 'Spotify (open.spotify.com)',
   anonymousRead: true,
   parseRef: async (ref) => parsePlaylistId(ref),
@@ -53,6 +57,7 @@ const deezer: ProviderSpec = {
   matches: ['deezer.com', 'link.deezer.com'],
   credentialLabel: 'Deezer ARL',
   credentialHint: 'login deezer.com → F12 → Application → Cookies → arl → copy value',
+  credentialExample: '3f9a1c...e7b2  (the value only, 192 hex chars, no "arl=" prefix)',
   loginSite: 'Deezer (deezer.com)',
   // Deezer's search is public, but reading a *playlist* goes through the authenticated GraphQL API.
   anonymousRead: false,
@@ -75,6 +80,7 @@ const ytmusic: ProviderSpec = {
   matches: ['music.youtube.com', 'youtube.com'],
   credentialLabel: 'YouTube Music cookies',
   credentialHint: 'login music.youtube.com → F12 → Network → any request → Request Headers → copy the whole "cookie:" value',
+  credentialExample: 'SAPISID=xxx; __Secure-3PAPISID=xxx; SID=xxx; __Secure-3PSID=xxx; __Secure-3PSIDTS=xxx; HSID=xxx; SSID=xxx; APISID=xxx  (one line, every cookie, SAPISID is required)',
   loginSite: 'YouTube Music (music.youtube.com)',
   anonymousRead: false,
   parseRef: async (ref) => parsePlaylistRef(ref),

@@ -57,6 +57,13 @@ when a credential is missing. Manual paste stays the fallback everywhere else.
 Each credential it finds is then checked against the live service, so you are told
 whether it actually works rather than just that it was saved.
 
+When a browser read comes back empty, plx says *why* (no logged-in browser, denied
+Keychain prompt, Firefox-only on this OS, …) and points at the manual path. The
+**Credentials** menu asks which way you want it — **Auto-fetch from browser** or
+**Paste cookies manually** — and the manual prompt shows both where to find the
+value and what a correct one looks like, so a value pasted with its `name=` prefix
+or half a YouTube bundle is easy to spot.
+
 ## Env vars
 
 Copy `.env.example` to `.env` (or export in shell). Env vars **override** stored credentials.

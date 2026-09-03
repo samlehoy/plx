@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { describe, expect, it } from 'vitest';
-import { decryptCookie, firefoxProfiles, parseSafariCookies, readFirefox } from '../src/browser.js';
+import { autoFetchHint, decryptCookie, firefoxProfiles, parseSafariCookies, readFirefox } from '../src/browser.js';
 import { cookieHeader } from '../src/ytmusic.js';
 
 const key = pbkdf2Sync('test-password', 'saltysalt', 1003, 16, 'sha1');
@@ -176,5 +176,22 @@ describe('firefoxProfiles', () => {
 
   it('returns nothing when Firefox is not installed', () => {
     expect(firefoxProfiles(join(tmpdir(), 'plx-no-firefox-here'))).toEqual([]);
+  });
+});
+
+describe('autoFetchHint', () => {
+  it('blames the Keychain only on macOS', () => {
+    expect(autoFetchHint('darwin', false)).toMatch(/Keychain/);
+  });
+
+  it('tells a Windows user without Firefox why Chrome is not an option', () => {
+    const hint = autoFetchHint('win32', false);
+    expect(hint).toMatch(/Firefox only/);
+    expect(hint).toMatch(/App-Bound Encryption/);
+    expect(hint).not.toMatch(/Keychain/);
+  });
+
+  it('distinguishes a Firefox profile that simply had no cookies', () => {
+    expect(autoFetchHint('win32', true)).toMatch(/found but held none/);
   });
 });

@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import { confirm, intro, isCancel, outro, password, select, text } from '@clack/prompts';
+import { autoFetchHint } from './browser.js';
 import { credential, loadConfig, saveCredential, saveRecentUrl, tryAutoFillCredentials, type Config } from './config.js';
 import { Conversion } from './conversion.js';
 import { PROVIDERS, inferSource, providerFor, targetKeys, type ProviderSpec } from './registry.js';
@@ -10,28 +11,55 @@ function args(): string[] { return process.argv.slice(2); }
 
 // --- Credentials -----------------------------------------------------------
 
-// Fill one provider's credential: browser auto-fill first, then a manual paste. Persists what it
-// gets. Returns the credential, or null when the user cancels.
+// Why the browser read came back with nothing for this provider, and what to do instead. Every
+// auto-fetch failure says this, so the user never sees a bare "could not be fetched".
+function explainAutoFetchFailure(spec?: ProviderSpec): void {
+  const what = spec ? `${spec.label} cookies` : 'No credentials';
+  console.log(`✗ ${what} could not be read from your browser. ${autoFetchHint()}`);
+}
+
+// One manual paste, with where to find the value and what a correct one looks like.
+async function promptCredential(cfg: Config, spec: ProviderSpec): Promise<boolean> {
+  console.log(`ℹ️ Where to find it: ${spec.credentialHint}`);
+  console.log(`   Looks like:      ${spec.credentialExample}`);
+  const entered = await password({ message: `Paste ${spec.credentialLabel}` });
+  if (isCancel(entered) || !entered) return false;
+  await saveCredential(cfg, spec.key, String(entered).trim()); // pasted values carry stray whitespace
+  return true;
+}
+
+// Fill one provider's credential mid-conversion: browser auto-fill first, then a manual paste.
+// Persists what it gets. Returns the credential, or null when the user cancels.
 async function ensureCredential(cfg: Config, spec: ProviderSpec): Promise<string | null> {
   if (credential(cfg, spec.key)) return credential(cfg, spec.key);
   const filled = await tryAutoFillCredentials(cfg);
   if (filled.includes(spec.key)) return credential(cfg, spec.key);
-  const entered = await password({ message: `${spec.credentialLabel} (${spec.credentialHint})` });
-  if (isCancel(entered) || !entered) return null;
-  await saveCredential(cfg, spec.key, String(entered));
+  explainAutoFetchFailure(spec);
+  if (!(await promptCredential(cfg, spec))) return null;
   return credential(cfg, spec.key);
 }
 
-// Settings entry for one provider's credential: unlike ensureCredential this always asks, so a
-// saved-but-expired credential can be replaced. Proves it against the live service before saying so.
+// Settings entry for one provider's credential. The two ways in are offered as a choice rather than
+// auto-first-then-manual, so someone who knows the browser read will fail (or who wants to replace a
+// saved-but-expired value with a cookie of their own) can go straight to the paste. Auto-fetch here
+// overwrites, scoped to this provider, so an expired credential is actually replaced.
+// Proves whatever lands against the live service before saying it worked.
 async function reenterCredential(cfg: Config, spec: ProviderSpec): Promise<void> {
-  warnLogin(spec.loginSite);
-  const filled = await tryAutoFillCredentials(cfg);
-  if (!filled.includes(spec.key)) {
-    const entered = await password({ message: `${spec.credentialLabel} (${spec.credentialHint})` });
-    if (isCancel(entered) || !entered) return;
-    await saveCredential(cfg, spec.key, String(entered));
+  const how = await select({
+    message: `${spec.credentialLabel}`,
+    options: [
+      { value: 'auto', label: 'Auto-fetch from browser' },
+      { value: 'manual', label: 'Paste cookies manually' },
+    ],
+  });
+  if (isCancel(how)) return;
+  if (how === 'auto') {
+    warnLogin(spec.loginSite);
+    if ((await tryAutoFillCredentials(cfg, true, spec.key)).includes(spec.key)) { await report(cfg, spec); return; }
+    explainAutoFetchFailure(spec);
+    console.log('   Paste it manually instead:');
   }
+  if (!(await promptCredential(cfg, spec))) return;
   await report(cfg, spec);
 }
 
@@ -218,9 +246,16 @@ async function runInteractive(options: CliOptions): Promise<void> {
     if (choice === 'autofetch') {
       warnLogin(PROVIDERS.map((p) => p.label).join(' & '));
       const filled = await tryAutoFillCredentials(cfg, true);
-      if (!filled.length) { console.log('✗ No credentials could be fetched (browser not logged in / keychain denied).'); continue; }
-      console.log(`Fetched from browser: ${filled.join(', ')}. Checking…`);
-      for (const key of filled) { const spec = providerFor(key); if (spec) await report(cfg, spec); }
+      if (filled.length) {
+        console.log(`Fetched from browser: ${filled.join(', ')}. Checking…`);
+        for (const key of filled) { const spec = providerFor(key); if (spec) await report(cfg, spec); }
+      } else {
+        explainAutoFetchFailure();
+      }
+      // Whatever auto-fetch managed, the manual path is what closes the gap — name it and the menu
+      // entry that leads to it, rather than leaving the user at a dead end.
+      const missing = PROVIDERS.filter((p) => !credential(cfg, p.key));
+      if (missing.length) console.log(`→ Still missing: ${missing.map((p) => p.label).join(', ')}. Add them from "Credentials: ${saved}/${PROVIDERS.length} saved" → pick the provider → "Paste cookies manually".`);
       continue;
     }
     if (choice === 'output') {
