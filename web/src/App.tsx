@@ -406,7 +406,7 @@ export default function App() {
 
         {/* pinned edge metadata */}
         <div className="absolute top-[5.5rem] right-5 md:right-8 z-10 hidden xl:block pointer-events-none">
-          <p className="meta-sm text-muted text-right">0.1.2 · cli</p>
+          <p className="meta-sm text-muted text-right">0.1.5 · cli</p>
         </div>
 
         {/* RECORD */}
