@@ -1,7 +1,7 @@
 import { createHmac } from 'node:crypto';
 import { z } from 'zod';
 import { browserHeaders, fetchJson, fetchText } from './http.js';
-import { matchCandidates, searchQuery } from './matcher.js';
+import { matchByDuration, matchCandidates, searchQuery } from './matcher.js';
 import type { Candidate, Match, Provider, Track } from './types.js';
 
 const PATHFINDER_URL = 'https://api-partner.spotify.com/pathfinder/v1/query';
@@ -217,7 +217,8 @@ export class SpotifyProvider implements Provider {
   readPlaylist(ref: string): Promise<{ tracks: Track[]; truncated: boolean }> { return readPlaylist(parsePlaylistId(ref), this.token); }
   async search(track: Track): Promise<Match | null> {
     const candidates = await searchTrack(searchQuery(track.name, track.artist), this.token);
-    return matchCandidates(track.name, track.artist, track.durationMs, candidates);
+    return matchCandidates(track.name, track.artist, track.durationMs, candidates)
+      ?? matchByDuration(track.name, track.artist, track.durationMs, candidates);
   }
   createPlaylist(title: string): Promise<string> { return createPlaylist(title, this.token); }
   // Returns the count submitted, not one the service confirmed: addToPlaylist reports transport

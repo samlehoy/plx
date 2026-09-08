@@ -4,7 +4,7 @@ export type Match = { id: string; title: string; artist: string; method: MatchMe
 // The tier that accepted a match. Open by design: a provider may produce a tier no other provider
 // can, and 'video' is the first — YouTube Music's music-video fallback (ADR 0003). Widening this is
 // how a new provider adds a tier; it is not a closed enum every provider must share.
-export type MatchMethod = 'exact' | 'fuzzy-duration' | 'fuzzy-title' | 'video';
+export type MatchMethod = 'exact' | 'fuzzy-duration' | 'fuzzy-title' | 'duration-only' | 'video';
 export type PlaylistRef = { name: string; uri: string };
 export type ReportRow = { playlist: string; source?: string; target?: string; title: string; artist: string; isrc: string | null; matched: boolean; target_id?: string | null; method?: string | null; note?: string | null };
 export type MatchResult = { matchedIds: string[]; total: number; truncated: boolean };

@@ -1,4 +1,4 @@
-import { matchCandidates, matchVideoCandidates, searchQuery } from './matcher.js';
+import { matchByDuration, matchCandidates, matchVideoCandidates, searchQuery } from './matcher.js';
 import { innertube, isMix, parsePlaylistRef } from './ytmusic.js';
 import { continuationToken, parseItems, playlistTitle, toCandidate, type YtItem } from './ytmusic-parse.js';
 import type { Match, Provider, Track } from './types.js';
@@ -62,8 +62,12 @@ export class YtMusicProvider implements Provider {
   // strategy, the matcher owns the rules).
   async search(track: Track): Promise<Match | null> {
     const songs = await this.searchItems(track, SONGS);
-    const song = matchCandidates(track.name, track.artist, track.durationMs, songs.filter((i) => i.isSong).map(toCandidate));
+    const songCandidates = songs.filter((i) => i.isSong).map(toCandidate);
+    const song = matchCandidates(track.name, track.artist, track.durationMs, songCandidates);
     if (song) return song;
+    // A catalog song under a translated title still beats a video — see matchByDuration.
+    const translated = matchByDuration(track.name, track.artist, track.durationMs, songCandidates);
+    if (translated) return translated;
 
     const videos = await this.searchItems(track, VIDEOS);
     return matchVideoCandidates(track.name, track.artist, track.durationMs, videos.map(toCandidate));
