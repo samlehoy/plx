@@ -7,7 +7,7 @@
     "type": "git",
     "url": "git+https://github.com/samlehoy/plx.git"
   },
-  "homepage": "https://plx.sh",
+  "homepage": "https://plx.eleonorez.xyz",
   "type": "module",
   "bin": {
     "plx": "dist/cli.js"
