@@ -45,24 +45,32 @@ Reading a Spotify playlist for a dry run needs **no credentials**.
 2. Open DevTools (F12) → **Application** (Chrome/Edge) or **Storage** (Firefox) → **Cookies** → the site domain.
 3. Find `arl` (Deezer) or `sp_dc` (Spotify) and copy its value. For YouTube Music, copy the whole `cookie:` header instead — see above.
 
-### Semi-auto fill (macOS)
+### Semi-auto fill
 
 Instead of hand-copying, plx can **read the credentials straight from a logged-in
-browser** — you only accept the macOS Keychain "Allow" dialog. It works for the
-**Chromium family** (Brave, Chrome, Edge, Chromium, Vivaldi, Opera) and **Safari**
-(Safari needs **Full Disk Access** in System Settings → Privacy & Security). Pick
-**"Auto-fetch credentials (from browser)"** from the menu, or it runs automatically
-when a credential is missing. Manual paste stays the fallback everywhere else.
+browser** that you pick from the detected browsers on your machine:
+
+- **macOS**: **Chromium family** (Brave, Chrome, Edge, Chromium, Vivaldi, Opera —
+  all `Default` and `Profile *` profiles, newest first; requires the macOS Keychain
+  "Allow" dialog and terminal access to the browser's app data), **Safari** (requires
+  **Full Disk Access** in System Settings → Privacy & Security), and **Firefox**
+  (when a Firefox profile exists).
+- **Windows & Linux**: **Firefox** (plaintext `cookies.sqlite`, newest profile first).
+
+Pick **"Auto-fetch credentials (from browser)"** from the menu and choose your
+browser, or pick **`Auto-fetch from <Browser>`** when prompted for a credential.
+Manual paste stays the fallback everywhere else.
 
 Each credential it finds is then checked against the live service, so you are told
 whether it actually works rather than just that it was saved.
 
-When a browser read comes back empty, plx says *why* (no logged-in browser, denied
-Keychain prompt, Firefox-only on this OS, …) and points at the manual path. The
-**Credentials** menu asks which way you want it — **Auto-fetch from browser** or
-**Paste cookies manually** — and the manual prompt shows both where to find the
-value and what a correct one looks like, so a value pasted with its `name=` prefix
-or half a YouTube bundle is easy to spot.
+When a browser read comes back empty, plx says *why* for the browser you picked
+(not logged in, denied Keychain prompt, terminal blocked from reading app data /
+missing Full Disk Access, Firefox-only on this OS, …) and points at the manual path.
+The **Credentials** menu lists each detected browser alongside **Paste cookies
+manually**, and the manual prompt shows both where to find the value and what a
+correct one looks like, so a value pasted with its `name=` prefix or half a YouTube
+bundle is easy to spot.
 
 ## Env vars
 

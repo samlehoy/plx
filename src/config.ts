@@ -2,7 +2,7 @@ import { chmod, mkdir, readFile, writeFile } from 'node:fs/promises';
 import { homedir, platform } from 'node:os';
 import { join } from 'node:path';
 import 'dotenv/config';
-import { fetchBrowserCredentials } from './browser.js';
+import { fetchBrowserCredentials, type BrowserKey } from './browser.js';
 
 // One opaque string per provider, keyed by provider name. This layer never parses a credential —
 // what it holds is a cookie for one provider and a whole cookie header for another, and only the
@@ -72,11 +72,11 @@ async function write(patch: Partial<Stored>): Promise<void> {
 // refetch and replace, and `only` to confine that to one provider — the Credentials menu refetches
 // the provider being edited without quietly replacing the other two. Never throws — a denied
 // keychain / TCC block just fills nothing, and the caller falls back to the manual paste prompt.
-export async function tryAutoFillCredentials(cfg: Config, overwrite = false, only?: string): Promise<string[]> {
+export async function tryAutoFillCredentials(cfg: Config, overwrite = false, only?: string, browser?: BrowserKey): Promise<string[]> {
   const wanted = only ? [only] : Object.keys(ENV_VAR);
   if (!overwrite && wanted.every((provider) => cfg.credentials[provider])) return [];
   const filled: string[] = [];
-  for (const [provider, value] of Object.entries(fetchBrowserCredentials())) {
+  for (const [provider, value] of Object.entries(fetchBrowserCredentials(browser))) {
     if (!value || !wanted.includes(provider) || (!overwrite && cfg.credentials[provider])) continue;
     cfg.credentials[provider] = value;
     filled.push(provider);

@@ -137,4 +137,11 @@ describe('browser auto-fill', () => {
   it('reports nothing filled when the browser yields nothing', async () => {
     expect(await tryAutoFillCredentials(await loadConfig())).toEqual([]);
   });
+
+  it('forwards the chosen browser to fetchBrowserCredentials', async () => {
+    browserFinds({ spotify: 'brave-dc' });
+    const cfg = await loadConfig();
+    expect(await tryAutoFillCredentials(cfg, true, 'spotify', 'brave')).toEqual(['spotify']);
+    expect(fetchBrowserCredentials).toHaveBeenCalledWith('brave');
+  });
 });

@@ -1,10 +1,10 @@
 import { createCipheriv, pbkdf2Sync } from 'node:crypto';
-import { mkdirSync, mkdtempSync, utimesSync, writeFileSync } from 'node:fs';
+import { chmodSync, mkdirSync, mkdtempSync, utimesSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
-import { describe, expect, it } from 'vitest';
-import { autoFetchHint, decryptCookie, firefoxProfiles, parseSafariCookies, readFirefox } from '../src/browser.js';
+import { describe, expect, it, vi } from 'vitest';
+import { autoFetchHint, chromiumProfiles, decryptCookie, detectedBrowsers, firefoxProfiles, parseSafariCookies, readChromiumDb, readFirefox } from '../src/browser.js';
 import { cookieHeader } from '../src/ytmusic.js';
 
 const key = pbkdf2Sync('test-password', 'saltysalt', 1003, 16, 'sha1');
@@ -36,6 +36,63 @@ describe('decryptCookie', () => {
 
   it('rejects a blob shorter than the prefix', () => {
     expect(decryptCookie(Buffer.from('v1'), key)).toBeNull();
+  });
+});
+
+function chromiumDb(cookies: Array<{ host: string; name: string; value: string }>, version = 24): string {
+  const path = join(mkdtempSync(join(tmpdir(), 'plx-cr-test-')), 'Cookies');
+  const db = new DatabaseSync(path);
+  db.exec('CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT); CREATE TABLE cookies (name TEXT, host_key TEXT, encrypted_value BLOB);');
+  db.prepare('INSERT INTO meta (key, value) VALUES (?, ?)').run('version', String(version));
+  const insert = db.prepare('INSERT INTO cookies (name, host_key, encrypted_value) VALUES (?, ?, ?)');
+  for (const { host, name, value } of cookies) insert.run(name, host, v10Encrypt(value, version >= 24));
+  db.close();
+  return path;
+}
+
+describe('readChromiumDb', () => {
+  it('returns nothing and skips the Keychain when the DB cannot be opened (e.g. macOS TCC block)', () => {
+    const path = chromiumDb([{ host: '.deezer.com', name: 'arl', value: 'abc123arl' }]);
+    chmodSync(path, 0o000);
+    const getPassword = vi.fn(() => 'test-password');
+    try {
+      expect(readChromiumDb(path, getPassword)).toEqual({});
+      expect(getPassword).not.toHaveBeenCalled();
+    } finally {
+      chmodSync(path, 0o600);
+    }
+  });
+
+  it('decrypts v10 cookies from a Chromium profile DB', () => {
+    const path = chromiumDb([
+      { host: '.deezer.com', name: 'arl', value: 'abc123arl' },
+      { host: '.google.com', name: 'SID', value: 'google-sid' },
+      { host: '.youtube.com', name: 'SID', value: 'yt-sid' },
+    ]);
+    expect(readChromiumDb(path, () => 'test-password')).toEqual({ arl: 'abc123arl', SID: 'yt-sid' });
+  });
+});
+
+describe('chromiumProfiles', () => {
+  const cookieFile = (root: string, name: string, mtime: number): string => {
+    mkdirSync(join(root, name), { recursive: true });
+    const db = join(root, name, 'Cookies');
+    writeFileSync(db, '');
+    utimesSync(db, mtime, mtime);
+    return db;
+  };
+
+  it('lists Default and Profile * cookie DBs, most recently written first', () => {
+    const root = mkdtempSync(join(tmpdir(), 'plx-cr-root-'));
+    const older = cookieFile(root, 'Default', 1_000);
+    const newer = cookieFile(root, 'Profile 6', 9_000);
+    cookieFile(root, 'System Profile', 99_000); // not a user profile
+    mkdirSync(join(root, 'Profile 4'), { recursive: true }); // no Cookies file
+    expect(chromiumProfiles(root)).toEqual([newer, older]);
+  });
+
+  it('returns nothing when the browser directory does not exist', () => {
+    expect(chromiumProfiles(join(tmpdir(), 'plx-no-chromium-here'))).toEqual([]);
   });
 });
 
@@ -179,9 +236,65 @@ describe('firefoxProfiles', () => {
   });
 });
 
+describe('detectedBrowsers', () => {
+  it('on macOS lists only Chromium browsers with a cookie DB, plus Safari, plus Firefox when present', () => {
+    const appSupport = mkdtempSync(join(tmpdir(), 'plx-appsup-'));
+    mkdirSync(join(appSupport, 'BraveSoftware/Brave-Browser', 'Default'), { recursive: true });
+    writeFileSync(join(appSupport, 'BraveSoftware/Brave-Browser', 'Default', 'Cookies'), '');
+    mkdirSync(join(appSupport, 'Google/Chrome', 'Profile 6'), { recursive: true });
+    writeFileSync(join(appSupport, 'Google/Chrome', 'Profile 6', 'Cookies'), '');
+    const noFf = join(tmpdir(), 'plx-no-firefox-here');
+
+    expect(detectedBrowsers('darwin', appSupport, noFf)).toEqual([
+      { key: 'brave', label: 'Brave' },
+      { key: 'chrome', label: 'Chrome' },
+      { key: 'safari', label: 'Safari' },
+    ]);
+
+    const ffRoot = mkdtempSync(join(tmpdir(), 'plx-ff-det-'));
+    mkdirSync(join(ffRoot, 'abcd.default'), { recursive: true });
+    writeFileSync(join(ffRoot, 'abcd.default', 'cookies.sqlite'), '');
+    expect(detectedBrowsers('darwin', appSupport, ffRoot)).toEqual([
+      { key: 'brave', label: 'Brave' },
+      { key: 'chrome', label: 'Chrome' },
+      { key: 'safari', label: 'Safari' },
+      { key: 'firefox', label: 'Firefox' },
+    ]);
+  });
+
+  it('on Windows/Linux lists only Firefox when a profile exists, and nothing otherwise', () => {
+    const appSupport = mkdtempSync(join(tmpdir(), 'plx-appsup-win-'));
+    const noFf = join(tmpdir(), 'plx-no-firefox-here');
+    expect(detectedBrowsers('win32', appSupport, noFf)).toEqual([]);
+
+    const ffRoot = mkdtempSync(join(tmpdir(), 'plx-ff-win-'));
+    mkdirSync(join(ffRoot, 'abcd.default'), { recursive: true });
+    writeFileSync(join(ffRoot, 'abcd.default', 'cookies.sqlite'), '');
+    expect(detectedBrowsers('win32', appSupport, ffRoot)).toEqual([{ key: 'firefox', label: 'Firefox' }]);
+  });
+});
+
 describe('autoFetchHint', () => {
-  it('blames the Keychain only on macOS', () => {
+  it('blames the Keychain and terminal permissions on macOS', () => {
     expect(autoFetchHint('darwin', false)).toMatch(/Keychain/);
+  });
+
+  it('names the chosen Chromium browser, Keychain, and macOS app-data permissions when a Chromium read fails', () => {
+    const hint = autoFetchHint('darwin', false, 'brave');
+    expect(hint).toMatch(/Brave/);
+    expect(hint).toMatch(/Keychain/);
+    expect(hint).toMatch(/Full Disk Access/);
+  });
+
+  it('points a Safari failure at Full Disk Access without blaming the Keychain', () => {
+    const hint = autoFetchHint('darwin', false, 'safari');
+    expect(hint).toMatch(/Safari/);
+    expect(hint).toMatch(/Full Disk Access/);
+    expect(hint).not.toMatch(/Keychain/);
+  });
+
+  it('tells a Firefox user to log in at Firefox when a Firefox read comes back empty', () => {
+    expect(autoFetchHint('darwin', true, 'firefox')).toMatch(/log in at the provider in Firefox/);
   });
 
   it('tells a Windows user without Firefox why Chrome is not an option', () => {

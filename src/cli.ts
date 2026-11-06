@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { confirm, intro, isCancel, outro, password, select, text } from '@clack/prompts';
-import { autoFetchHint } from './browser.js';
+import { autoFetchHint, detectedBrowsers, type BrowserKey } from './browser.js';
 import { credential, loadConfig, saveCredential, saveRecentUrl, tryAutoFillCredentials, type Config } from './config.js';
 import { Conversion } from './conversion.js';
 import { PROVIDERS, inferSource, providerFor, targetKeys, type ProviderSpec } from './registry.js';
@@ -13,9 +13,9 @@ function args(): string[] { return process.argv.slice(2); }
 
 // Why the browser read came back with nothing for this provider, and what to do instead. Every
 // auto-fetch failure says this, so the user never sees a bare "could not be fetched".
-function explainAutoFetchFailure(spec?: ProviderSpec): void {
+function explainAutoFetchFailure(spec?: ProviderSpec, browser?: BrowserKey): void {
   const what = spec ? `${spec.label} cookies` : 'No credentials';
-  console.log(`✗ ${what} could not be read from your browser. ${autoFetchHint()}`);
+  console.log(`✗ ${what} could not be read from your browser. ${autoFetchHint(undefined, undefined, browser)}`);
 }
 
 // One manual paste, with where to find the value and what a correct one looks like.
@@ -28,38 +28,51 @@ async function promptCredential(cfg: Config, spec: ProviderSpec): Promise<boolea
   return true;
 }
 
-// Fill one provider's credential mid-conversion: browser auto-fill first, then a manual paste.
-// Persists what it gets. Returns the credential, or null when the user cancels.
-async function ensureCredential(cfg: Config, spec: ProviderSpec): Promise<string | null> {
-  if (credential(cfg, spec.key)) return credential(cfg, spec.key);
-  const filled = await tryAutoFillCredentials(cfg);
-  if (filled.includes(spec.key)) return credential(cfg, spec.key);
-  explainAutoFetchFailure(spec);
-  if (!(await promptCredential(cfg, spec))) return null;
-  return credential(cfg, spec.key);
-}
-
-// Settings entry for one provider's credential. The two ways in are offered as a choice rather than
-// auto-first-then-manual, so someone who knows the browser read will fail (or who wants to replace a
-// saved-but-expired value with a cookie of their own) can go straight to the paste. Auto-fetch here
-// overwrites, scoped to this provider, so an expired credential is actually replaced.
-// Proves whatever lands against the live service before saying it worked.
-async function reenterCredential(cfg: Config, spec: ProviderSpec): Promise<void> {
+// Pick which detected browser to read from, or 'manual' to paste directly. When no supported
+// browser is detected on this OS, explains why and goes straight to the manual paste.
+async function chooseCredentialSource(spec: ProviderSpec): Promise<BrowserKey | 'manual' | null> {
+  const browsers = detectedBrowsers();
+  if (!browsers.length) {
+    explainAutoFetchFailure(spec);
+    return 'manual';
+  }
   const how = await select({
     message: `${spec.credentialLabel}`,
     options: [
-      { value: 'auto', label: 'Auto-fetch from browser' },
-      { value: 'manual', label: 'Paste cookies manually' },
+      ...browsers.map((b) => ({ value: b.key, label: `Auto-fetch from ${b.label}` })),
+      { value: 'manual' as const, label: 'Paste cookies manually' },
     ],
   });
-  if (isCancel(how)) return;
-  if (how === 'auto') {
+  return isCancel(how) ? null : how;
+}
+
+// Choose a detected browser (or manual paste) and populate `spec`'s credential, falling back to
+// manual paste when the chosen browser has nothing for `spec`.
+async function acquireCredential(cfg: Config, spec: ProviderSpec, overwrite: boolean, only?: string): Promise<boolean> {
+  const source = await chooseCredentialSource(spec);
+  if (!source) return false;
+  if (source !== 'manual') {
     warnLogin(spec.loginSite);
-    if ((await tryAutoFillCredentials(cfg, true, spec.key)).includes(spec.key)) { await report(cfg, spec); return; }
-    explainAutoFetchFailure(spec);
+    if ((await tryAutoFillCredentials(cfg, overwrite, only, source)).includes(spec.key)) return true;
+    explainAutoFetchFailure(spec, source);
     console.log('   Paste it manually instead:');
   }
-  if (!(await promptCredential(cfg, spec))) return;
+  return promptCredential(cfg, spec);
+}
+
+// Fill one provider's credential mid-conversion: pick a detected browser (or manual paste), and
+// fall back to manual paste if the chosen browser had no cookie for this provider.
+async function ensureCredential(cfg: Config, spec: ProviderSpec): Promise<string | null> {
+  if (credential(cfg, spec.key)) return credential(cfg, spec.key);
+  if (!(await acquireCredential(cfg, spec, false))) return null;
+  return credential(cfg, spec.key);
+}
+
+// Settings entry for one provider's credential. Offers each detected browser alongside manual
+// paste in a single menu, and overwrites scoped to this provider so an expired credential is
+// replaced without touching the other two. Proves whatever lands against the live service.
+async function reenterCredential(cfg: Config, spec: ProviderSpec): Promise<void> {
+  if (!(await acquireCredential(cfg, spec, true, spec.key))) return;
   await report(cfg, spec);
 }
 
@@ -96,6 +109,19 @@ async function build(cfg: Config, spec: ProviderSpec, needsWrite: boolean): Prom
 
 function warnLogin(sites: string): void {
   console.log(`⚠️ Make sure you're logged in at ${sites} in your browser, then grab the credentials.`);
+}
+
+async function pickBrowser(): Promise<BrowserKey | null> {
+  const browsers = detectedBrowsers();
+  if (!browsers.length) {
+    explainAutoFetchFailure();
+    return null;
+  }
+  const pick = await select({
+    message: 'From which browser?',
+    options: browsers.map((b) => ({ value: b.key, label: b.label })),
+  });
+  return isCancel(pick) ? null : pick;
 }
 
 // Pick a provider by role. Adding a provider adds an option here, never a menu entry.
@@ -244,18 +270,22 @@ async function runInteractive(options: CliOptions): Promise<void> {
       continue;
     }
     if (choice === 'autofetch') {
-      warnLogin(PROVIDERS.map((p) => p.label).join(' & '));
-      const filled = await tryAutoFillCredentials(cfg, true);
-      if (filled.length) {
-        console.log(`Fetched from browser: ${filled.join(', ')}. Checking…`);
-        for (const key of filled) { const spec = providerFor(key); if (spec) await report(cfg, spec); }
-      } else {
-        explainAutoFetchFailure();
+      const browser = await pickBrowser();
+      if (browser) {
+        warnLogin(PROVIDERS.map((p) => p.label).join(' & '));
+        const filled = await tryAutoFillCredentials(cfg, true, undefined, browser);
+        if (filled.length) {
+          console.log(`Fetched from browser: ${filled.join(', ')}. Checking…`);
+          for (const key of filled) { const spec = providerFor(key); if (spec) await report(cfg, spec); }
+        } else {
+          explainAutoFetchFailure(undefined, browser);
+        }
       }
       // Whatever auto-fetch managed, the manual path is what closes the gap — name it and the menu
       // entry that leads to it, rather than leaving the user at a dead end.
+      const nowSaved = PROVIDERS.filter((p) => credential(cfg, p.key)).length;
       const missing = PROVIDERS.filter((p) => !credential(cfg, p.key));
-      if (missing.length) console.log(`→ Still missing: ${missing.map((p) => p.label).join(', ')}. Add them from "Credentials: ${saved}/${PROVIDERS.length} saved" → pick the provider → "Paste cookies manually".`);
+      if (missing.length) console.log(`→ Still missing: ${missing.map((p) => p.label).join(', ')}. Add them from "Credentials: ${nowSaved}/${PROVIDERS.length} saved" → pick the provider → "Paste cookies manually".`);
       continue;
     }
     if (choice === 'output') {

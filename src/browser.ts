@@ -21,18 +21,21 @@ import { YTMUSIC_COOKIES, cookieHeader } from './ytmusic.js';
 // cookie terms; the mapping to one credential per provider happens in fetchBrowserCredentials.
 export type BrowserCredentials = Record<string, string>;
 
+export type BrowserKey = 'brave' | 'chrome' | 'edge' | 'chromium' | 'vivaldi' | 'opera' | 'safari' | 'firefox';
+export type BrowserOption = { key: BrowserKey; label: string };
+
 // One decrypt scheme for the whole Chromium family; only the profile dir and
 // Keychain service name differ. Verified against a live Brave DB (key hex
 // e93fc524…, arl → hex string, sp_dc → base64 string).
-type ChromiumBrowser = { dir: string; keychain: string };
+type ChromiumBrowser = { key: BrowserKey; label: string; dir: string; keychain: string };
 
 const CHROMIUM_BROWSERS: ChromiumBrowser[] = [
-  { dir: 'BraveSoftware/Brave-Browser', keychain: 'Brave Safe Storage' },
-  { dir: 'Google/Chrome', keychain: 'Chrome Safe Storage' },
-  { dir: 'Microsoft Edge', keychain: 'Microsoft Edge Safe Storage' },
-  { dir: 'Chromium', keychain: 'Chromium Safe Storage' },
-  { dir: 'Vivaldi', keychain: 'Vivaldi Safe Storage' },
-  { dir: 'com.operasoftware.Opera', keychain: 'Opera Safe Storage' },
+  { key: 'brave', label: 'Brave', dir: 'BraveSoftware/Brave-Browser', keychain: 'Brave Safe Storage' },
+  { key: 'chrome', label: 'Chrome', dir: 'Google/Chrome', keychain: 'Chrome Safe Storage' },
+  { key: 'edge', label: 'Edge', dir: 'Microsoft Edge', keychain: 'Microsoft Edge Safe Storage' },
+  { key: 'chromium', label: 'Chromium', dir: 'Chromium', keychain: 'Chromium Safe Storage' },
+  { key: 'vivaldi', label: 'Vivaldi', dir: 'Vivaldi', keychain: 'Vivaldi Safe Storage' },
+  { key: 'opera', label: 'Opera', dir: 'com.operasoftware.Opera', keychain: 'Opera Safe Storage' },
 ];
 
 // Chromium v10 blob: 3-byte "v10" prefix + AES-128-CBC (IV = 16 × 0x20, PKCS7).
@@ -100,19 +103,23 @@ function collect(rows: Array<{ name: string; host: string; value: string }>): Br
   return Object.fromEntries([...best].map(([name, { value }]) => [name, value]));
 }
 
-function readChromium(browser: ChromiumBrowser): BrowserCredentials {
-  const dbPath = join(homedir(), 'Library', 'Application Support', browser.dir, 'Default', 'Cookies');
+export function readChromiumDb(dbPath: string, getPassword: () => string | null): BrowserCredentials {
   if (!existsSync(dbPath)) return {};
-  const pw = keychainPassword(browser.keychain);
-  if (pw == null) return {};
-  const key = pbkdf2Sync(pw, PBKDF2_SALT, PBKDF2_ITER, PBKDF2_KEYLEN, 'sha1');
-
-  const db = new DatabaseSync(dbPath, { readOnly: true });
+  let db: DatabaseSync;
+  try {
+    db = new DatabaseSync(dbPath, { readOnly: true });
+  } catch {
+    return {}; // TCC-denied or unreadable — skip before touching the Keychain
+  }
   try {
     const meta = db.prepare("SELECT value FROM meta WHERE key = 'version'").get() as { value?: string } | undefined;
     const dbVersion = meta?.value ? Number(meta.value) : 0;
     const query = `SELECT name, host_key, encrypted_value FROM cookies WHERE name IN (${COOKIE_NAMES.map(() => '?').join(',')})`;
     const rows = db.prepare(query).all(...COOKIE_NAMES) as Array<{ name: string; host_key: string; encrypted_value: Uint8Array }>;
+    if (!rows.length) return {};
+    const pw = getPassword();
+    if (pw == null) return {};
+    const key = pbkdf2Sync(pw, PBKDF2_SALT, PBKDF2_ITER, PBKDF2_KEYLEN, 'sha1');
     return collect(rows.flatMap((row) => {
       const value = decryptCookie(Buffer.from(row.encrypted_value), key, dbVersion >= 24);
       return value ? [{ name: row.name, host: row.host_key, value }] : [];
@@ -122,6 +129,32 @@ function readChromium(browser: ChromiumBrowser): BrowserCredentials {
   } finally {
     db.close();
   }
+}
+
+function sortedProfileDbs(base: string, cookieFile: string, includeDir: (name: string) => boolean = () => true): string[] {
+  try {
+    return readdirSync(base, { withFileTypes: true })
+      .filter((entry) => entry.isDirectory() && includeDir(entry.name))
+      .map((entry) => join(base, entry.name, cookieFile))
+      .filter(existsSync)
+      .sort((a, b) => statSync(b).mtimeMs - statSync(a).mtimeMs);
+  } catch {
+    return [];
+  }
+}
+
+// Every user profile (`Default`, `Profile 1`, `Profile 6`, …) holding a `Cookies` DB inside a
+// Chromium browser's Application Support dir, most-recently-written first.
+export function chromiumProfiles(browserDir: string): string[] {
+  return sortedProfileDbs(browserDir, 'Cookies', (name) => name === 'Default' || name.startsWith('Profile '));
+}
+
+function readChromium(browser: ChromiumBrowser, appSupportDir = join(homedir(), 'Library', 'Application Support')): BrowserCredentials[] {
+  const profiles = chromiumProfiles(join(appSupportDir, browser.dir));
+  if (!profiles.length) return [];
+  let cachedPw: string | null | undefined;
+  const getPassword = () => (cachedPw === undefined ? (cachedPw = keychainPassword(browser.keychain)) : cachedPw);
+  return profiles.map((dbPath) => readChromiumDb(dbPath, getPassword));
 }
 
 // Safari `Cookies.binarycookies` layout (mirrors browser_cookie3):
@@ -191,15 +224,7 @@ const FIREFOX_ROOTS: Record<string, string> = {
 export function firefoxProfiles(root: string = FIREFOX_ROOTS[platform()] ?? FIREFOX_ROOTS.linux): string[] {
   const nested = join(root, 'Profiles');
   const base = existsSync(nested) ? nested : root; // some Linux packagings drop the Profiles/ level
-  try {
-    return readdirSync(base, { withFileTypes: true })
-      .filter((entry) => entry.isDirectory())
-      .map((entry) => join(base, entry.name, 'cookies.sqlite'))
-      .filter(existsSync)
-      .sort((a, b) => statSync(b).mtimeMs - statSync(a).mtimeMs);
-  } catch {
-    return []; // no Firefox installed, or an unreadable profile root
-  }
+  return sortedProfileDbs(base, 'cookies.sqlite');
 }
 
 // Firefox keeps the DB in WAL mode and holds it open while running — on Windows that lock is
@@ -229,19 +254,47 @@ export function readFirefox(dbPath: string): BrowserCredentials {
   }
 }
 
-// Auto-retrieve credentials from the first logged-in browser that has them, keyed by provider —
-// the parsers above speak in cookie names, and this is where that becomes one opaque string per
-// provider for the config layer to store. Never throws: a missing browser, locked DB, denied
-// keychain, or TCC block just yields {}. Manual paste stays the fallback.
-export function fetchBrowserCredentials(): Record<string, string> {
-  // The keychain-backed backends stay gated on macOS; Firefox runs everywhere and is all that
-  // Windows and Linux get. macOS keeps its original order, so nothing changes for anyone who
-  // already relied on this — Firefox only fills what the others left empty.
-  const keychainBacked = platform() === 'darwin' ? [...CHROMIUM_BROWSERS.map(readChromium), readSafari()] : [];
+// Browsers available to pick on this OS: on macOS, every Chromium browser with at least one profile
+// cookie DB on disk plus Safari (whose container is TCC-gated until tried), plus Firefox when a
+// profile exists. On Windows and Linux, Firefox is the only supported backend.
+export function detectedBrowsers(
+  os: string = platform(),
+  appSupportDir: string = join(homedir(), 'Library', 'Application Support'),
+  firefoxRoot?: string,
+): BrowserOption[] {
+  const options: BrowserOption[] = [];
+  if (os === 'darwin') {
+    for (const browser of CHROMIUM_BROWSERS) {
+      if (chromiumProfiles(join(appSupportDir, browser.dir)).length > 0) {
+        options.push({ key: browser.key, label: browser.label });
+      }
+    }
+    options.push({ key: 'safari', label: 'Safari' });
+  }
+  if (firefoxProfiles(firefoxRoot).length > 0) {
+    options.push({ key: 'firefox', label: 'Firefox' });
+  }
+  return options;
+}
+
+function readBrowserProfiles(browser?: BrowserKey): BrowserCredentials[] {
+  if (browser === 'firefox') return firefoxProfiles().map(readFirefox);
+  if (browser === 'safari') return platform() === 'darwin' ? [readSafari()] : [];
+  if (browser) {
+    const chromium = CHROMIUM_BROWSERS.find((b) => b.key === browser);
+    return platform() === 'darwin' && chromium ? readChromium(chromium) : [];
+  }
+  const keychainBacked = platform() === 'darwin' ? [...CHROMIUM_BROWSERS.flatMap((b) => readChromium(b)), readSafari()] : [];
+  return [...keychainBacked, ...firefoxProfiles().map(readFirefox)];
+}
+
+// Auto-retrieve credentials from the selected browser (or the first logged-in browser when none is
+// named), keyed by provider — the parsers above speak in cookie names, and this is where that
+// becomes one opaque string per provider for the config layer to store. Never throws: a missing
+// browser, locked DB, denied keychain, or TCC block just yields {}. Manual paste stays the fallback.
+export function fetchBrowserCredentials(browser?: BrowserKey): Record<string, string> {
   const credentials: Record<string, string> = {};
-  // Every backend is read rather than stopping at the first: a user may be logged into Deezer in one
-  // browser and YouTube Music in another.
-  for (const found of [...keychainBacked, ...firefoxProfiles().map(readFirefox)]) {
+  for (const found of readBrowserProfiles(browser)) {
     if (!credentials.deezer && found.arl) credentials.deezer = found.arl;
     if (!credentials.spotify && found.sp_dc) credentials.spotify = found.sp_dc;
     // A cookie bundle is only a session as a *set* from one profile, so it is built per browser and
@@ -261,9 +314,20 @@ export function fetchBrowserCredentials(): Record<string, string> {
 // backend, so the useful thing to report is which half of that is missing. This says *why* only —
 // the caller owns pointing at the manual paste, so that instruction lives in one place. Both inputs
 // are injected so the branches are testable without a browser or a second OS.
-export function autoFetchHint(os: string = platform(), firefoxFound = firefoxProfiles().length > 0): string {
-  if (os === 'darwin') return 'No browser was logged in, or the macOS Keychain prompt was denied.';
-  if (firefoxFound) return 'A Firefox profile was found but held none of the cookies — log in at the provider in Firefox and retry.';
+export function autoFetchHint(os: string = platform(), firefoxFound = firefoxProfiles().length > 0, browser?: BrowserKey): string {
+  if (browser === 'safari') {
+    return 'Safari held none of the cookies, or your terminal lacks Full Disk Access (System Settings → Privacy & Security → Full Disk Access).';
+  }
+  if (browser === 'firefox' || (os !== 'darwin' && !browser && firefoxFound)) {
+    return 'A Firefox profile was found but held none of the cookies — log in at the provider in Firefox and retry.';
+  }
+  if (browser) {
+    const label = CHROMIUM_BROWSERS.find((b) => b.key === browser)?.label ?? browser;
+    return `${label} held none of the cookies, the macOS Keychain prompt was denied, or macOS blocked your terminal from reading ${label}'s app data (System Settings → Privacy & Security → App Management / Full Disk Access).`;
+  }
+  if (os === 'darwin') {
+    return 'No browser was logged in, the macOS Keychain prompt was denied, or macOS blocked your terminal from reading browser data (System Settings → Privacy & Security → Full Disk Access).';
+  }
   const why = os === 'win32'
     ? 'Chrome/Edge cookies are sealed by App-Bound Encryption that only a SYSTEM process can unwrap'
     : 'the Chromium keyring backends are not implemented here';
