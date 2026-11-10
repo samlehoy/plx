@@ -1,7 +1,7 @@
 import { createHmac } from 'node:crypto';
 import { z } from 'zod';
 import { browserHeaders, fetchJson, fetchText } from './http.js';
-import { matchByDuration, matchCandidates, searchQuery } from './matcher.js';
+import { fieldQuery, matchByDuration, matchByTitle, matchCandidates, searchQuery } from './matcher.js';
 import type { Candidate, Match, Provider, Track } from './types.js';
 
 const PATHFINDER_URL = 'https://api-partner.spotify.com/pathfinder/v1/query';
@@ -216,9 +216,16 @@ export class SpotifyProvider implements Provider {
   constructor(private readonly token: string) {}
   readPlaylist(ref: string): Promise<{ tracks: Track[]; truncated: boolean }> { return readPlaylist(parsePlaylistId(ref), this.token); }
   async search(track: Track): Promise<Match | null> {
-    const candidates = await searchTrack(searchQuery(track.name, track.artist), this.token);
-    return matchCandidates(track.name, track.artist, track.durationMs, candidates)
-      ?? matchByDuration(track.name, track.artist, track.durationMs, candidates);
+    const free = await searchTrack(searchQuery(track.name, track.artist), this.token);
+    const match = matchCandidates(track.name, track.artist, track.durationMs, free);
+    if (match) return match;
+    // Free text can rank an artist's hits above a short title — "ILLIT Pop" never surfaces "Pop" —
+    // so a miss retries in field syntax, which pins both. The same fallback Deezer runs.
+    const fielded = await searchTrack(fieldQuery(track.name, track.artist), this.token);
+    const all = [...free, ...fielded];
+    return matchCandidates(track.name, track.artist, track.durationMs, fielded)
+      ?? matchByDuration(track.name, track.artist, track.durationMs, all)
+      ?? matchByTitle(track.name, track.artist, track.durationMs, all);
   }
   createPlaylist(title: string): Promise<string> { return createPlaylist(title, this.token); }
   // Returns the count submitted, not one the service confirmed: addToPlaylist reports transport

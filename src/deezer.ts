@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { fetchJson, retry } from './http.js';
-import { firstArtist, matchByDuration, matchCandidates, searchQuery, stripFeat } from './matcher.js';
+import { fieldQuery, firstArtist, matchByDuration, matchByTitle, matchCandidates, searchQuery } from './matcher.js';
 import type { Match, Provider, Track } from './types.js';
 
 const gqlSchema = z.object({ errors: z.array(z.object({ message: z.string() })).optional(), data: z.unknown() });
@@ -65,7 +65,7 @@ export class DeezerClient implements Provider {
     const match = matchCandidates(track.name, track.artist, track.durationMs, candidates);
     if (match) return match;
     // Free-text relevance ranks covers/remixes above the real K-pop track; fall back to field syntax.
-    const field = `${API}/search?${new URLSearchParams({ q: `track:"${stripFeat(track.name)}" artist:"${firstArtist(track.artist)}"`, limit: '5' })}`;
+    const field = `${API}/search?${new URLSearchParams({ q: fieldQuery(track.name, track.artist), limit: '5' })}`;
     const data2 = await retry(async () => fetchJson<{ data: Array<{ id: number; title: string; duration: number; artist: { name: string } }> }>(field));
     const candidates2 = toCandidates(data2);
     const match2 = matchCandidates(track.name, track.artist, track.durationMs, candidates2);
@@ -73,7 +73,8 @@ export class DeezerClient implements Provider {
     // The catalog scan still compares titles, so it stays ahead of the title-blind tier.
     const byAlbum = await this.searchByAlbum(track);
     if (byAlbum) return byAlbum;
-    return matchByDuration(track.name, track.artist, track.durationMs, [...candidates, ...candidates2]);
+    const all = [...candidates, ...candidates2];
+    return matchByDuration(track.name, track.artist, track.durationMs, all) ?? matchByTitle(track.name, track.artist, track.durationMs, all);
   }
   // Artist → albums → album tracks, for tracks the search index never surfaces (e.g. "Salty & Sweet").
   private async searchByAlbum(track: Track): Promise<Match | null> {

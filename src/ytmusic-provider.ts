@@ -1,7 +1,8 @@
-import { matchByDuration, matchCandidates, matchVideoCandidates, searchQuery } from './matcher.js';
+import { retry } from './http.js';
+import { matchByDuration, matchByTitle, matchCandidates, matchVideoCandidates, searchQuery, songForVideo } from './matcher.js';
 import { innertube, isMix, parsePlaylistRef } from './ytmusic.js';
 import { continuationToken, parseItems, playlistTitle, toCandidate, type YtItem } from './ytmusic-parse.js';
-import type { Match, Provider, Track } from './types.js';
+import type { Candidate, Match, Provider, Skipped, Track } from './types.js';
 
 // Search filter params, as the web client sends them: catalog songs, and music videos.
 const SONGS = 'EgWKAQIIAWoKEAkQBRAKEAMQBA%3D%3D';
@@ -31,19 +32,46 @@ export class YtMusicProvider implements Provider {
     }
   }
 
-  // Music videos are read but not converted: their stated artist is the uploading channel, so
-  // matching on it produces confident wrong answers. They come back as `skipped` so the report can
-  // show them as their own kind of row rather than silently dropping them.
-  async readPlaylist(playlistId: string): Promise<{ tracks: Track[]; truncated: boolean; skipped: Array<{ name: string; artist: string }> }> {
+  // A music video's stated artist is the uploading channel and its title is dressed for the upload,
+  // so matching on either produces confident wrong answers. It converts instead as the catalog song
+  // it carries, found by this catalog's own song search (songForVideo), in its place in the playlist.
+  // Anything else that is not a song — a video that resolves to nothing, an entry with no type (an
+  // unavailable track), a podcast episode — comes back as `skipped` with its reason, so the report
+  // shows it as its own kind of row rather than silently dropping it.
+  async readPlaylist(playlistId: string): Promise<{ tracks: Track[]; truncated: boolean; skipped: Skipped[] }> {
     if (isMix(playlistId)) {
       throw new Error('That is a mix, not a playlist. A mix is generated fresh every time it is opened, so it has no fixed contents to convert — open the playlist you want and use its link.');
     }
     const { items } = await this.browseAll(playlistId);
-    return {
-      tracks: items.filter((i) => i.isSong).map((i) => ({ name: i.title, artist: i.artist, durationMs: secToMs(i.durationSec) })),
-      truncated: false,
-      skipped: items.filter((i) => !i.isSong).map((i) => ({ name: i.title, artist: i.artist })),
-    };
+    const videos = items.filter((i) => i.isVideo).length;
+    if (videos) console.log(`Resolving ${videos} music video${videos === 1 ? '' : 's'} to the song${videos === 1 ? '' : 's'} they carry…`);
+    const tracks: Track[] = [];
+    const skipped: Skipped[] = [];
+    for (const item of items) {
+      if (item.isSong) { tracks.push({ name: item.title, artist: item.artist, durationMs: secToMs(item.durationSec) }); continue; }
+      if (!item.isVideo) { skipped.push({ name: item.title, artist: item.artist, reason: 'unavailable on YouTube Music, or not music' }); continue; }
+      const song = await this.resolveVideo(item);
+      if (song) tracks.push({ name: song.title, artist: song.artist, durationMs: secToMs(song.duration), video: item.title });
+      else skipped.push({ name: item.title, artist: item.artist, reason: song === null ? 'music video with no matching song' : 'music video, song lookup failed' });
+    }
+    return { tracks, truncated: false, skipped };
+  }
+
+  // The channel leads the query, as the artist does for a song. A re-upload channel ("splash.mp3")
+  // only muddies it, so a video that resolves to nothing tries its title alone. Resolves null when
+  // nothing matched and undefined when the search itself kept failing: one bad lookup costs that
+  // video, never the whole playlist read.
+  private async resolveVideo(video: YtItem): Promise<Candidate | null | undefined> {
+    const queries = [{ name: video.title, artist: video.artist }, { name: video.title, artist: '' }];
+    try {
+      for (const query of queries) {
+        const songs = await retry(() => this.searchItems(query, SONGS));
+        await new Promise((resolve) => setTimeout(resolve, 300)); // the same pacing the conversion keeps
+        const song = songForVideo(video.title, video.artist, songs.filter((i) => i.isSong).map(toCandidate));
+        if (song) return song;
+      }
+      return null;
+    } catch { return undefined; }
   }
 
   async playlistName(playlistId: string): Promise<string> {
@@ -65,8 +93,10 @@ export class YtMusicProvider implements Provider {
     const songCandidates = songs.filter((i) => i.isSong).map(toCandidate);
     const song = matchCandidates(track.name, track.artist, track.durationMs, songCandidates);
     if (song) return song;
-    // A catalog song under a translated title still beats a video — see matchByDuration.
-    const translated = matchByDuration(track.name, track.artist, track.durationMs, songCandidates);
+    // A catalog song under a translated title or artist still beats a video — see matchByDuration
+    // and matchByTitle.
+    const translated = matchByDuration(track.name, track.artist, track.durationMs, songCandidates)
+      ?? matchByTitle(track.name, track.artist, track.durationMs, songCandidates);
     if (translated) return translated;
 
     const videos = await this.searchItems(track, VIDEOS);

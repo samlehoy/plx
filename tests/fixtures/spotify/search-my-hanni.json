@@ -1,0 +1,3603 @@
+{
+ "recorded": "2026-11-09",
+ "source": "YouTube Music playlist \"My Hanni\" → Spotify searchTracks",
+ "tracks": [
+  {
+   "name": "APT.",
+   "artist": "ROSÉ & Bruno Mars",
+   "durationMs": 170000
+  },
+  {
+   "name": "당돌한 여자",
+   "artist": "지효, 채영, 쯔위 & 나연",
+   "durationMs": 186000
+  },
+  {
+   "name": "Pop",
+   "artist": "ILLIT",
+   "durationMs": 144000
+  },
+  {
+   "name": "Algorithm (Eng Ver.)",
+   "artist": "HeeJin",
+   "durationMs": 188000
+  },
+  {
+   "name": "Cupid (Twin Version)",
+   "artist": "FIFTY FIFTY",
+   "durationMs": 175000
+  },
+  {
+   "name": "Algorithm",
+   "artist": "HeeJin",
+   "durationMs": 189000
+  },
+  {
+   "name": "SPAGHETTI (Member ver.)",
+   "artist": "LE SSERAFIM",
+   "durationMs": 137000
+  },
+  {
+   "name": "Dimension (AAA Ver.)",
+   "artist": "tripleS",
+   "durationMs": 192000
+  },
+  {
+   "name": "options",
+   "artist": "fcj & JUNA",
+   "durationMs": 154000
+  },
+  {
+   "name": "라비앙로즈 (La Vie en Rose)",
+   "artist": "IZ*ONE (아이즈원)",
+   "durationMs": 219000
+  },
+  {
+   "name": "NEON",
+   "artist": "A2O & A2O LITE",
+   "durationMs": 208000
+  }
+ ],
+ "responses": {
+  "ROSÉ & Bruno Mars APT.": {
+   "data": {
+    "searchV2": {
+     "tracksV2": {
+      "items": [
+       {
+        "item": {
+         "data": {
+          "uri": "spotify:track:7aDp7zLGSwuYbq83azgBQj",
+          "name": "ROSÉ & Bruno Mars - APT. Piano by Ray Mak",
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "Ray Mak"
+             }
+            }
+           ]
+          },
+          "duration": {
+           "totalMilliseconds": 173120
+          }
+         }
+        }
+       },
+       {
+        "item": {
+         "data": {
+          "uri": "spotify:track:4wJ5Qq0jBN4ajy7ouZIV1c",
+          "name": "APT.",
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "ROSÉ"
+             }
+            },
+            {
+             "profile": {
+              "name": "Bruno Mars"
+             }
+            }
+           ]
+          },
+          "duration": {
+           "totalMilliseconds": 169917
+          }
+         }
+        }
+       },
+       {
+        "item": {
+         "data": {
+          "uri": "spotify:track:5vNRhkKd0yEAg8suGBpjeY",
+          "name": "APT.",
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "ROSÉ"
+             }
+            },
+            {
+             "profile": {
+              "name": "Bruno Mars"
+             }
+            }
+           ]
+          },
+          "duration": {
+           "totalMilliseconds": 169917
+          }
+         }
+        }
+       },
+       {
+        "item": {
+         "data": {
+          "uri": "spotify:track:1z5ebC9238uGoBgzYyvGpQ",
+          "name": "toxic till the end",
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "ROSÉ"
+             }
+            }
+           ]
+          },
+          "duration": {
+           "totalMilliseconds": 156685
+          }
+         }
+        }
+       },
+       {
+        "item": {
+         "data": {
+          "uri": "spotify:track:4tDBzLEooFi3xExlx7YAq5",
+          "name": "APT.",
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "ROSÉ"
+             }
+            },
+            {
+             "profile": {
+              "name": "Bruno Mars"
+             }
+            }
+           ]
+          },
+          "duration": {
+           "totalMilliseconds": 169917
+          }
+         }
+        }
+       },
+       {
+        "item": {
+         "data": {
+          "uri": "spotify:track:3UioYpCNNER5IlrUg4BNZp",
+          "name": "APT.",
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "ROSÉ"
+             }
+            },
+            {
+             "profile": {
+              "name": "Bruno Mars"
+             }
+            }
+           ]
+          },
+          "duration": {
+           "totalMilliseconds": 169917
+          }
+         }
+        }
+       },
+       {
+        "item": {
+         "data": {
+          "uri": "spotify:track:4aYZGAmZ3KtCSQHUYkzXjf",
+          "name": "Merry Crisis",
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "notsong"
+             }
+            }
+           ]
+          },
+          "duration": {
+           "totalMilliseconds": 199366
+          }
+         }
+        }
+       },
+       {
+        "item": {
+         "data": {
+          "uri": "spotify:track:77kkodniIVg5BoLnSqrho0",
+          "name": "fronto garden",
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "Chow Mane"
+             }
+            },
+            {
+             "profile": {
+              "name": "Sawhee"
+             }
+            }
+           ]
+          },
+          "duration": {
+           "totalMilliseconds": 172373
+          }
+         }
+        }
+       },
+       {
+        "item": {
+         "data": {
+          "uri": "spotify:track:5smvT6qt9HprP99R8QYfQb",
+          "name": "ON C R U I S E",
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "Kenny Duke"
+             }
+            }
+           ]
+          },
+          "duration": {
+           "totalMilliseconds": 188446
+          }
+         }
+        }
+       },
+       {
+        "item": {
+         "data": {
+          "uri": "spotify:track:6LTn2HQkj71douImSDUqkB",
+          "name": "Coquito",
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "Andy Mineo"
+             }
+            },
+            {
+             "profile": {
+              "name": "Foggieraw"
+             }
+            },
+            {
+             "profile": {
+              "name": "Mannywellz"
+             }
+            }
+           ]
+          },
+          "duration": {
+           "totalMilliseconds": 245311
+          }
+         }
+        }
+       }
+      ]
+     }
+    }
+   }
+  },
+  "track:\"APT.\" artist:\"ROSÉ & Bruno Mars\"": {
+   "data": {
+    "searchV2": {
+     "tracksV2": {
+      "items": [
+       {
+        "item": {
+         "data": {
+          "uri": "spotify:track:4wJ5Qq0jBN4ajy7ouZIV1c",
+          "name": "APT.",
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "ROSÉ"
+             }
+            },
+            {
+             "profile": {
+              "name": "Bruno Mars"
+             }
+            }
+           ]
+          },
+          "duration": {
+           "totalMilliseconds": 169917
+          }
+         }
+        }
+       },
+       {
+        "item": {
+         "data": {
+          "uri": "spotify:track:2ipHkoYux6uY1DwwBb4aFV",
+          "name": "APT.",
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "ROSÉ"
+             }
+            },
+            {
+             "profile": {
+              "name": "Bruno Mars"
+             }
+            }
+           ]
+          },
+          "duration": {
+           "totalMilliseconds": 169917
+          }
+         }
+        }
+       },
+       {
+        "item": {
+         "data": {
+          "uri": "spotify:track:3pqFnFvFiVMhiZ4yGaEa8F",
+          "name": "APT.",
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "ROSÉ"
+             }
+            },
+            {
+             "profile": {
+              "name": "Bruno Mars"
+             }
+            }
+           ]
+          },
+          "duration": {
+           "totalMilliseconds": 169917
+          }
+         }
+        }
+       },
+       {
+        "item": {
+         "data": {
+          "uri": "spotify:track:3UQXEMr06JDmJhmQmhyH74",
+          "name": "APT.",
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "ROSÉ"
+             }
+            },
+            {
+             "profile": {
+              "name": "Bruno Mars"
+             }
+            }
+           ]
+          },
+          "duration": {
+           "totalMilliseconds": 169917
+          }
+         }
+        }
+       },
+       {
+        "item": {
+         "data": {
+          "uri": "spotify:track:3AVOcyYqZUgRl7KoWQs4gL",
+          "name": "APT.",
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "ROSÉ"
+             }
+            },
+            {
+             "profile": {
+              "name": "Bruno Mars"
+             }
+            }
+           ]
+          },
+          "duration": {
+           "totalMilliseconds": 169917
+          }
+         }
+        }
+       },
+       {
+        "item": {
+         "data": {
+          "uri": "spotify:track:2X3DlOF546VuOJLPu7hn9J",
+          "name": "APT.",
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "ROSÉ"
+             }
+            },
+            {
+             "profile": {
+              "name": "Bruno Mars"
+             }
+            }
+           ]
+          },
+          "duration": {
+           "totalMilliseconds": 169917
+          }
+         }
+        }
+       },
+       {
+        "item": {
+         "data": {
+          "uri": "spotify:track:4kZHPZ5Mbm18OaGPIDyZAJ",
+          "name": "APT.",
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "ROSÉ"
+             }
+            },
+            {
+             "profile": {
+              "name": "Bruno Mars"
+             }
+            }
+           ]
+          },
+          "duration": {
+           "totalMilliseconds": 169917
+          }
+         }
+        }
+       },
+       {
+        "item": {
+         "data": {
+          "uri": "spotify:track:4tDBzLEooFi3xExlx7YAq5",
+          "name": "APT.",
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "ROSÉ"
+             }
+            },
+            {
+             "profile": {
+              "name": "Bruno Mars"
+             }
+            }
+           ]
+          },
+          "duration": {
+           "totalMilliseconds": 169917
+          }
+         }
+        }
+       },
+       {
+        "item": {
+         "data": {
+          "uri": "spotify:track:5fah0EI793NTKytdGQXuWA",
+          "name": "APT.",
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "ROSÉ"
+             }
+            },
+            {
+             "profile": {
+              "name": "Bruno Mars"
+             }
+            }
+           ]
+          },
+          "duration": {
+           "totalMilliseconds": 169917
+          }
+         }
+        }
+       },
+       {
+        "item": {
+         "data": {
+          "uri": "spotify:track:78NHNytuBeO5XyhSYJj90S",
+          "name": "APT.",
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "ROSÉ"
+             }
+            },
+            {
+             "profile": {
+              "name": "Bruno Mars"
+             }
+            }
+           ]
+          },
+          "duration": {
+           "totalMilliseconds": 169917
+          }
+         }
+        }
+       }
+      ]
+     }
+    }
+   }
+  },
+  "지효 당돌한 여자": {
+   "data": {
+    "searchV2": {
+     "tracksV2": {
+      "items": [
+       {
+        "item": {
+         "data": {
+          "uri": "spotify:track:7AqScxClmkJdqHZjWSkKH8",
+          "name": "당돌한 여자",
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "JIHYO"
+             }
+            },
+            {
+             "profile": {
+              "name": "NAYEON"
+             }
+            },
+            {
+             "profile": {
+              "name": "쯔위"
+             }
+            },
+            {
+             "profile": {
+              "name": "Chaeyeong"
+             }
+            }
+           ]
+          },
+          "duration": {
+           "totalMilliseconds": 185533
+          }
+         }
+        }
+       },
+       {
+        "item": {
+         "data": {
+          "uri": "spotify:track:5BcoXaP58gi3zkW5I0SHkw",
+          "name": "당돌한 여자",
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "서주경"
+             }
+            }
+           ]
+          },
+          "duration": {
+           "totalMilliseconds": 220093
+          }
+         }
+        }
+       },
+       {
+        "item": {
+         "data": {
+          "uri": "spotify:track:1I47EdgMVr9CQvOImEU5dI",
+          "name": "당돌한 여자",
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "트로트광팬"
+             }
+            }
+           ]
+          },
+          "duration": {
+           "totalMilliseconds": 217495
+          }
+         }
+        }
+       },
+       {
+        "item": {
+         "data": {
+          "uri": "spotify:track:4Fusm6QUe0sL0df2qmlVPy",
+          "name": "당돌한 여자",
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "가수연맹"
+             }
+            }
+           ]
+          },
+          "duration": {
+           "totalMilliseconds": 217495
+          }
+         }
+        }
+       },
+       {
+        "item": {
+         "data": {
+          "uri": "spotify:track:7CaZKHPiz48vYKmWDXP2NL",
+          "name": "당돌한 여자",
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "Five Sense"
+             }
+            }
+           ]
+          },
+          "duration": {
+           "totalMilliseconds": 222969
+          }
+         }
+        }
+       },
+       {
+        "item": {
+         "data": {
+          "uri": "spotify:track:6uDF3NUIKSpEcPHKrTKoIA",
+          "name": "여성시대",
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "SeeYa"
+             }
+            },
+            {
+             "profile": {
+              "name": "DAVICHI"
+             }
+            },
+            {
+             "profile": {
+              "name": "T-ARA"
+             }
+            }
+           ]
+          },
+          "duration": {
+           "totalMilliseconds": 212143
+          }
+         }
+        }
+       },
+       {
+        "item": {
+         "data": {
+          "uri": "spotify:track:0WSS3DmpxUIxrbLK6ETXTu",
+          "name": "정",
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "YTC"
+             }
+            }
+           ]
+          },
+          "duration": {
+           "totalMilliseconds": 230791
+          }
+         }
+        }
+       },
+       {
+        "item": {
+         "data": {
+          "uri": "spotify:track:1UTppd7eUkoTvFyUvxhj26",
+          "name": "섹시한 남자 (Sexy guy) (Gay Ver.)",
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "권도운(Gwon Dowoon)"
+             }
+            }
+           ]
+          },
+          "duration": {
+           "totalMilliseconds": 225909
+          }
+         }
+        }
+       },
+       {
+        "item": {
+         "data": {
+          "uri": "spotify:track:5Y3EgHuKItAobM6wZWaulk",
+          "name": "당근할아버지",
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "차진혁"
+             }
+            }
+           ]
+          },
+          "duration": {
+           "totalMilliseconds": 95730
+          }
+         }
+        }
+       }
+      ]
+     }
+    }
+   }
+  },
+  "track:\"당돌한 여자\" artist:\"지효\"": {
+   "data": {
+    "searchV2": {
+     "tracksV2": {
+      "items": [
+       {
+        "item": {
+         "data": {
+          "uri": "spotify:track:7AqScxClmkJdqHZjWSkKH8",
+          "name": "당돌한 여자",
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "JIHYO"
+             }
+            },
+            {
+             "profile": {
+              "name": "NAYEON"
+             }
+            },
+            {
+             "profile": {
+              "name": "쯔위"
+             }
+            },
+            {
+             "profile": {
+              "name": "Chaeyeong"
+             }
+            }
+           ]
+          },
+          "duration": {
+           "totalMilliseconds": 185533
+          }
+         }
+        }
+       }
+      ]
+     }
+    }
+   }
+  },
+  "ILLIT Pop": {
+   "data": {
+    "searchV2": {
+     "tracksV2": {
+      "items": [
+       {
+        "item": {
+         "data": {
+          "uri": "spotify:track:2kIUILBPlz4exX9xIFS275",
+          "name": "Lucky Girl Syndrome",
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "ILLIT"
+             }
+            }
+           ]
+          },
+          "duration": {
+           "totalMilliseconds": 140021
+          }
+         }
+        }
+       },
+       {
+        "item": {
+         "data": {
+          "uri": "spotify:track:0wFU2pYHZi45Ws1VD6aSJX",
+          "name": "jellyous",
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "ILLIT"
+             }
+            }
+           ]
+          },
+          "duration": {
+           "totalMilliseconds": 163243
+          }
+         }
+        }
+       },
+       {
+        "item": {
+         "data": {
+          "uri": "spotify:track:4p0uVFAXKUISu8yp9gNtWE",
+          "name": "Billyeoon Goyangi (Do the Dance)",
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "ILLIT"
+             }
+            }
+           ]
+          },
+          "duration": {
+           "totalMilliseconds": 188641
+          }
+         }
+        }
+       },
+       {
+        "item": {
+         "data": {
+          "uri": "spotify:track:1k0JAiH11gHL9dc5dfQjQr",
+          "name": "NOT CUTE ANYMORE",
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "ILLIT"
+             }
+            }
+           ]
+          },
+          "duration": {
+           "totalMilliseconds": 131997
+          }
+         }
+        }
+       },
+       {
+        "item": {
+         "data": {
+          "uri": "spotify:track:0znsc67nMhP4X9hjhvoyeP",
+          "name": "Tick-Tack",
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "ILLIT"
+             }
+            }
+           ]
+          },
+          "duration": {
+           "totalMilliseconds": 129468
+          }
+         }
+        }
+       },
+       {
+        "item": {
+         "data": {
+          "uri": "spotify:track:1aKvZDoLGkNMxoRYgkckZG",
+          "name": "Magnetic",
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "ILLIT"
+             }
+            }
+           ]
+          },
+          "duration": {
+           "totalMilliseconds": 160688
+          }
+         }
+        }
+       },
+       {
+        "item": {
+         "data": {
+          "uri": "spotify:track:2MoUuJhpSO4a0czxvsrSC6",
+          "name": "Cherish (My Love)",
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "ILLIT"
+             }
+            }
+           ]
+          },
+          "duration": {
+           "totalMilliseconds": 176854
+          }
+         }
+        }
+       },
+       {
+        "item": {
+         "data": {
+          "uri": "spotify:track:1D5L58KLBbceOynTP4DQnY",
+          "name": "It's Me",
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "ILLIT"
+             }
+            }
+           ]
+          },
+          "duration": {
+           "totalMilliseconds": 138284
+          }
+         }
+        }
+       },
+       {
+        "item": {
+         "data": {
+          "uri": "spotify:track:21LtZQQMQYwVIxc9O9Ygq8",
+          "name": "Cherish (My Love)",
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "ILLIT"
+             }
+            }
+           ]
+          },
+          "duration": {
+           "totalMilliseconds": 176854
+          }
+         }
+        }
+       },
+       {
+        "item": {
+         "data": {
+          "uri": "spotify:track:4zGTfXR2v4TWFvwbxBrrN7",
+          "name": "jellyous",
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "ILLIT"
+             }
+            }
+           ]
+          },
+          "duration": {
+           "totalMilliseconds": 188693
+          }
+         }
+        }
+       }
+      ]
+     }
+    }
+   }
+  },
+  "track:\"Pop\" artist:\"ILLIT\"": {
+   "data": {
+    "searchV2": {
+     "tracksV2": {
+      "items": [
+       {
+        "item": {
+         "data": {
+          "uri": "spotify:track:0pMUFsi8eS2bEkIW0fePtI",
+          "name": "Pop",
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "ILLIT"
+             }
+            }
+           ]
+          },
+          "duration": {
+           "totalMilliseconds": 143875
+          }
+         }
+        }
+       },
+       {
+        "item": {
+         "data": {
+          "uri": "spotify:track:1ZByjMFxOWVDaycnKvrvfV",
+          "name": "Album for Children, Op. 39: Chanson Populaire. Vivace",
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "Pyotr Ilyich Tchaikovsky"
+             }
+            },
+            {
+             "profile": {
+              "name": "Arkady Sevidov"
+             }
+            }
+           ]
+          },
+          "duration": {
+           "totalMilliseconds": 37026
+          }
+         }
+        }
+       },
+       {
+        "item": {
+         "data": {
+          "uri": "spotify:track:3S2EKHijzVMBR4s6TESJUu",
+          "name": "Humoresque, Op. 10, No. 2 in G Major (Based on a French Popular Song) - Duo-Art D661",
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "Pyotr Ilyich Tchaikovsky"
+             }
+            },
+            {
+             "profile": {
+              "name": "Rudolph Reuter"
+             }
+            },
+            {
+             "profile": {
+              "name": "Peter Phillips"
+             }
+            }
+           ]
+          },
+          "duration": {
+           "totalMilliseconds": 160838
+          }
+         }
+        }
+       },
+       {
+        "item": {
+         "data": {
+          "uri": "spotify:track:3nwKs0zDOtkA7bX8tgoGE9",
+          "name": "Melodi Rindu - Lagu Pop Jazz Indonesia",
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "Yanti Afriwan"
+             }
+            },
+            {
+             "profile": {
+              "name": "Pyotr Ilyich Tchaikovsky"
+             }
+            }
+           ]
+          },
+          "duration": {
+           "totalMilliseconds": 231154
+          }
+         }
+        }
+       },
+       {
+        "item": {
+         "data": {
+          "uri": "spotify:track:4A2ZNKEL1XfR4HFuUf0TRf",
+          "name": "Humoresque, Op. 10, No. 2 in G Major (Based on a French Popular Song) - Duo-Art 7115",
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "Pyotr Ilyich Tchaikovsky"
+             }
+            },
+            {
+             "profile": {
+              "name": "Josef Hofmann"
+             }
+            }
+           ]
+          },
+          "duration": {
+           "totalMilliseconds": 149534
+          }
+         }
+        }
+       },
+       {
+        "item": {
+         "data": {
+          "uri": "spotify:track:1rcn37d6xuw1370hnjGjMt",
+          "name": "Humoresque, Op. 10, No. 2 in G Major (Based on a French Popular Song) - Duo-Art 7115",
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "Pyotr Ilyich Tchaikovsky"
+             }
+            },
+            {
+             "profile": {
+              "name": "Josef Hofmann"
+             }
+            },
+            {
+             "profile": {
+              "name": "Peter Phillips"
+             }
+            }
+           ]
+          },
+          "duration": {
+           "totalMilliseconds": 149534
+          }
+         }
+        }
+       },
+       {
+        "item": {
+         "data": {
+          "uri": "spotify:track:0BQ1Ufwaf77eFjWZphsKbj",
+          "name": "Humoresque, Op. 10, No. 2 in G Major (Based on a French Popular Song) - Duo-Art 7115",
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "Pyotr Ilyich Tchaikovsky"
+             }
+            },
+            {
+             "profile": {
+              "name": "Josef Hofmann"
+             }
+            },
+            {
+             "profile": {
+              "name": "Peter Phillips"
+             }
+            }
+           ]
+          },
+          "duration": {
+           "totalMilliseconds": 149534
+          }
+         }
+        }
+       },
+       {
+        "item": {
+         "data": {
+          "uri": "spotify:track:2AyBr2QMvE5OSVos0zKdDN",
+          "name": "Humoresque, Op. 10, No. 2 in G Major (Based on a French Popular Song) - Duo-Art D661",
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "Pyotr Ilyich Tchaikovsky"
+             }
+            },
+            {
+             "profile": {
+              "name": "Rudolph Reuter"
+             }
+            },
+            {
+             "profile": {
+              "name": "Peter Phillips"
+             }
+            }
+           ]
+          },
+          "duration": {
+           "totalMilliseconds": 160838
+          }
+         }
+        }
+       },
+       {
+        "item": {
+         "data": {
+          "uri": "spotify:track:6HDh4RigaJkM5l8cZyYoHL",
+          "name": "Poppin",
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "Illitant"
+             }
+            }
+           ]
+          },
+          "duration": {
+           "totalMilliseconds": 236964
+          }
+         }
+        }
+       },
+       {
+        "item": {
+         "data": {
+          "uri": "spotify:track:1aYMtxDXOljdwaHnEolLcl",
+          "name": "Pop My Shit Freeystyle",
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "Illite Kenny"
+             }
+            }
+           ]
+          },
+          "duration": {
+           "totalMilliseconds": 198373
+          }
+         }
+        }
+       }
+      ]
+     }
+    }
+   }
+  },
+  "HeeJin Algorithm (Eng Ver.)": {
+   "data": {
+    "searchV2": {
+     "tracksV2": {
+      "items": [
+       {
+        "item": {
+         "data": {
+          "uri": "spotify:track:219BWYqAdlhbNp9wHpXUkL",
+          "name": "Algorithm - Eng Ver.",
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "HeeJin"
+             }
+            }
+           ]
+          },
+          "duration": {
+           "totalMilliseconds": 187733
+          }
+         }
+        }
+       },
+       {
+        "item": {
+         "data": {
+          "uri": "spotify:track:582xAA2OloV2kcDqlC0fJ5",
+          "name": "Algorithm - Eng Rock Ver.",
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "HeeJin"
+             }
+            }
+           ]
+          },
+          "duration": {
+           "totalMilliseconds": 192386
+          }
+         }
+        }
+       },
+       {
+        "item": {
+         "data": {
+          "uri": "spotify:track:2tGjh54bikVc5x3dl1pUKx",
+          "name": "Algorithm",
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "HeeJin"
+             }
+            }
+           ]
+          },
+          "duration": {
+           "totalMilliseconds": 188320
+          }
+         }
+        }
+       },
+       {
+        "item": {
+         "data": {
+          "uri": "spotify:track:26z9YaukqS3xtQm2fhm4UV",
+          "name": "Algorithm",
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "CHUNG HA"
+             }
+            }
+           ]
+          },
+          "duration": {
+           "totalMilliseconds": 147443
+          }
+         }
+        }
+       },
+       {
+        "item": {
+         "data": {
+          "uri": "spotify:track:4XiUq9nRhqLvLcJ3N9jdih",
+          "name": "Algorithm",
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "JEY"
+             }
+            }
+           ]
+          },
+          "duration": {
+           "totalMilliseconds": 81373
+          }
+         }
+        }
+       },
+       {
+        "item": {
+         "data": {
+          "uri": "spotify:track:0BTaaKT4RMbs5M73tOHX5Y",
+          "name": "Alcohol-Free",
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "TWICE"
+             }
+            }
+           ]
+          },
+          "duration": {
+           "totalMilliseconds": 210573
+          }
+         }
+        }
+       },
+       {
+        "item": {
+         "data": {
+          "uri": "spotify:track:4bjN59DRXFRxBE1g5ne6B1",
+          "name": "Haegeum",
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "Agust D"
+             }
+            }
+           ]
+          },
+          "duration": {
+           "totalMilliseconds": 168926
+          }
+         }
+        }
+       },
+       {
+        "item": {
+         "data": {
+          "uri": "spotify:track:0JKGe340YJwfDrpXqPQ8sw",
+          "name": "Daechwita",
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "Agust D"
+             }
+            }
+           ]
+          },
+          "duration": {
+           "totalMilliseconds": 225668
+          }
+         }
+        }
+       },
+       {
+        "item": {
+         "data": {
+          "uri": "spotify:track:0SfFCjldRnnbsIL65yqaEd",
+          "name": "Ejeh",
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "WOOJIN of LNGSHOT"
+             }
+            }
+           ]
+          },
+          "duration": {
+           "totalMilliseconds": 135000
+          }
+         }
+        }
+       },
+       {
+        "item": {
+         "data": {
+          "uri": "spotify:track:3XGNwyRWtiOiypmMivrqfS",
+          "name": "witch (VIVINOS - ALNST Sub : MIZI Part.1)",
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "Rubyeye"
+             }
+            }
+           ]
+          },
+          "duration": {
+           "totalMilliseconds": 201593
+          }
+         }
+        }
+       }
+      ]
+     }
+    }
+   }
+  },
+  "track:\"Algorithm (Eng Ver.)\" artist:\"HeeJin\"": {
+   "data": {
+    "searchV2": {
+     "tracksV2": {
+      "items": [
+       {
+        "item": {
+         "data": {
+          "uri": "spotify:track:219BWYqAdlhbNp9wHpXUkL",
+          "name": "Algorithm - Eng Ver.",
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "HeeJin"
+             }
+            }
+           ]
+          },
+          "duration": {
+           "totalMilliseconds": 187733
+          }
+         }
+        }
+       },
+       {
+        "item": {
+         "data": {
+          "uri": "spotify:track:582xAA2OloV2kcDqlC0fJ5",
+          "name": "Algorithm - Eng Rock Ver.",
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "HeeJin"
+             }
+            }
+           ]
+          },
+          "duration": {
+           "totalMilliseconds": 192386
+          }
+         }
+        }
+       }
+      ]
+     }
+    }
+   }
+  },
+  "FIFTY FIFTY Cupid (Twin Version)": {
+   "data": {
+    "searchV2": {
+     "tracksV2": {
+      "items": [
+       {
+        "item": {
+         "data": {
+          "uri": "spotify:track:5pMPNxZz50iup8cXchRHxm",
+          "name": "Cupid - Twin Version",
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "FIFTY FIFTY"
+             }
+            }
+           ]
+          },
+          "duration": {
+           "totalMilliseconds": 174253
+          }
+         }
+        }
+       },
+       {
+        "item": {
+         "data": {
+          "uri": "spotify:track:6Ft6nfssjDYmgmXF19poJE",
+          "name": "Cupid – Twin Ver. (feat. Sabrina Carpenter)",
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "FIFTY FIFTY"
+             }
+            },
+            {
+             "profile": {
+              "name": "Sabrina Carpenter"
+             }
+            }
+           ]
+          },
+          "duration": {
+           "totalMilliseconds": 173801
+          }
+         }
+        }
+       },
+       {
+        "item": {
+         "data": {
+          "uri": "spotify:track:53DDMPqgMWNrEeE3NjThKE",
+          "name": "Cupid - Twin Version",
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "FIFTY FIFTY"
+             }
+            }
+           ]
+          },
+          "duration": {
+           "totalMilliseconds": 173461
+          }
+         }
+        }
+       },
+       {
+        "item": {
+         "data": {
+          "uri": "spotify:track:76V1WuoxMcMG52jc8ifZVX",
+          "name": "Cupid - Twin Ver. (FIFTY FIFTY) - Sped Up Version",
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "FIFTY FIFTY"
+             }
+            }
+           ]
+          },
+          "duration": {
+           "totalMilliseconds": 145897
+          }
+         }
+        }
+       },
+       {
+        "item": {
+         "data": {
+          "uri": "spotify:track:4TqmTBSWsZXMj3LouLEvXn",
+          "name": "Cupid",
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "FIFTY FIFTY"
+             }
+            }
+           ]
+          },
+          "duration": {
+           "totalMilliseconds": 174517
+          }
+         }
+        }
+       },
+       {
+        "item": {
+         "data": {
+          "uri": "spotify:track:3VqSRkq3jRpsSEBngUcY6a",
+          "name": "Cupid",
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "FIFTY FIFTY"
+             }
+            }
+           ]
+          },
+          "duration": {
+           "totalMilliseconds": 174253
+          }
+         }
+        }
+       },
+       {
+        "item": {
+         "data": {
+          "uri": "spotify:track:1UYLxZIL4IicS6TaPUZFTH",
+          "name": "Blasé (feat. Future & Rae Sremmurd)",
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "Ty Dolla $ign"
+             }
+            },
+            {
+             "profile": {
+              "name": "Future"
+             }
+            },
+            {
+             "profile": {
+              "name": "Rae Sremmurd"
+             }
+            }
+           ]
+          },
+          "duration": {
+           "totalMilliseconds": 285233
+          }
+         }
+        }
+       },
+       {
+        "item": {
+         "data": {
+          "uri": "spotify:track:3nW6HqoWdzpdz2oAzkHEoV",
+          "name": "Blasé (feat. Future & Rae Sremmurd)",
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "Ty Dolla $ign"
+             }
+            },
+            {
+             "profile": {
+              "name": "Future"
+             }
+            },
+            {
+             "profile": {
+              "name": "Rae Sremmurd"
+             }
+            }
+           ]
+          },
+          "duration": {
+           "totalMilliseconds": 286144
+          }
+         }
+        }
+       },
+       {
+        "item": {
+         "data": {
+          "uri": "spotify:track:0T29ROaAvtYH9JmzUB5uht",
+          "name": "Blasé (feat. Future & Rae Sremmurd)",
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "Ty Dolla $ign"
+             }
+            },
+            {
+             "profile": {
+              "name": "Future"
+             }
+            },
+            {
+             "profile": {
+              "name": "Rae Sremmurd"
+             }
+            }
+           ]
+          },
+          "duration": {
+           "totalMilliseconds": 285207
+          }
+         }
+        }
+       },
+       {
+        "item": {
+         "data": {
+          "uri": "spotify:track:0Vl3mJekIJajtG74Up4W3o",
+          "name": "Blasé (feat. Future & Rae Sremmurd)",
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "Ty Dolla $ign"
+             }
+            },
+            {
+             "profile": {
+              "name": "Future"
+             }
+            },
+            {
+             "profile": {
+              "name": "Rae Sremmurd"
+             }
+            }
+           ]
+          },
+          "duration": {
+           "totalMilliseconds": 285207
+          }
+         }
+        }
+       }
+      ]
+     }
+    }
+   }
+  },
+  "track:\"Cupid (Twin Version)\" artist:\"FIFTY FIFTY\"": {
+   "data": {
+    "searchV2": {
+     "tracksV2": {
+      "items": [
+       {
+        "item": {
+         "data": {
+          "uri": "spotify:track:5pMPNxZz50iup8cXchRHxm",
+          "name": "Cupid - Twin Version",
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "FIFTY FIFTY"
+             }
+            }
+           ]
+          },
+          "duration": {
+           "totalMilliseconds": 174253
+          }
+         }
+        }
+       },
+       {
+        "item": {
+         "data": {
+          "uri": "spotify:track:6Ft6nfssjDYmgmXF19poJE",
+          "name": "Cupid – Twin Ver. (feat. Sabrina Carpenter)",
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "FIFTY FIFTY"
+             }
+            },
+            {
+             "profile": {
+              "name": "Sabrina Carpenter"
+             }
+            }
+           ]
+          },
+          "duration": {
+           "totalMilliseconds": 173801
+          }
+         }
+        }
+       },
+       {
+        "item": {
+         "data": {
+          "uri": "spotify:track:2ULO5bTRJtjuylJiHyRuSh",
+          "name": "Cupid - Twin Ver. (FIFTY FIFTY) - Sped Up Version",
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "FIFTY FIFTY"
+             }
+            }
+           ]
+          },
+          "duration": {
+           "totalMilliseconds": 145200
+          }
+         }
+        }
+       },
+       {
+        "item": {
+         "data": {
+          "uri": "spotify:track:53DDMPqgMWNrEeE3NjThKE",
+          "name": "Cupid - Twin Version",
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "FIFTY FIFTY"
+             }
+            }
+           ]
+          },
+          "duration": {
+           "totalMilliseconds": 173461
+          }
+         }
+        }
+       },
+       {
+        "item": {
+         "data": {
+          "uri": "spotify:track:4gXHG9domIKO6FIViDISA4",
+          "name": "Cupid (Twin Ver.) - Live Studio Version OT4",
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "FIFTY FIFTY"
+             }
+            }
+           ]
+          },
+          "duration": {
+           "totalMilliseconds": 174116
+          }
+         }
+        }
+       },
+       {
+        "item": {
+         "data": {
+          "uri": "spotify:track:2d3J5QGTn6RAAEx85COVP9",
+          "name": "Cupid - Twin Version",
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "FIFTY FIFTY"
+             }
+            }
+           ]
+          },
+          "duration": {
+           "totalMilliseconds": 174253
+          }
+         }
+        }
+       },
+       {
+        "item": {
+         "data": {
+          "uri": "spotify:track:2PIlXYby0grCf7xV7MLsay",
+          "name": "Cupid - Twin Ver. - Slowed Down Version",
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "FIFTY FIFTY"
+             }
+            }
+           ]
+          },
+          "duration": {
+           "totalMilliseconds": 209126
+          }
+         }
+        }
+       },
+       {
+        "item": {
+         "data": {
+          "uri": "spotify:track:76V1WuoxMcMG52jc8ifZVX",
+          "name": "Cupid - Twin Ver. (FIFTY FIFTY) - Sped Up Version",
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "FIFTY FIFTY"
+             }
+            }
+           ]
+          },
+          "duration": {
+           "totalMilliseconds": 145897
+          }
+         }
+        }
+       },
+       {
+        "item": {
+         "data": {
+          "uri": "spotify:track:71xeyANK7gsuSEz6t8wHWa",
+          "name": "Cupid - Twin Version",
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "FIFTY FIFTY"
+             }
+            }
+           ]
+          },
+          "duration": {
+           "totalMilliseconds": 174253
+          }
+         }
+        }
+       }
+      ]
+     }
+    }
+   }
+  },
+  "HeeJin Algorithm": {
+   "data": {
+    "searchV2": {
+     "tracksV2": {
+      "items": [
+       {
+        "item": {
+         "data": {
+          "uri": "spotify:track:2tGjh54bikVc5x3dl1pUKx",
+          "name": "Algorithm",
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "HeeJin"
+             }
+            }
+           ]
+          },
+          "duration": {
+           "totalMilliseconds": 188320
+          }
+         }
+        }
+       },
+       {
+        "item": {
+         "data": {
+          "uri": "spotify:track:219BWYqAdlhbNp9wHpXUkL",
+          "name": "Algorithm - Eng Ver.",
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "HeeJin"
+             }
+            }
+           ]
+          },
+          "duration": {
+           "totalMilliseconds": 187733
+          }
+         }
+        }
+       },
+       {
+        "item": {
+         "data": {
+          "uri": "spotify:track:582xAA2OloV2kcDqlC0fJ5",
+          "name": "Algorithm - Eng Rock Ver.",
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "HeeJin"
+             }
+            }
+           ]
+          },
+          "duration": {
+           "totalMilliseconds": 192386
+          }
+         }
+        }
+       },
+       {
+        "item": {
+         "data": {
+          "uri": "spotify:track:26z9YaukqS3xtQm2fhm4UV",
+          "name": "Algorithm",
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "CHUNG HA"
+             }
+            }
+           ]
+          },
+          "duration": {
+           "totalMilliseconds": 147443
+          }
+         }
+        }
+       },
+       {
+        "item": {
+         "data": {
+          "uri": "spotify:track:4XiUq9nRhqLvLcJ3N9jdih",
+          "name": "Algorithm",
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "JEY"
+             }
+            }
+           ]
+          },
+          "duration": {
+           "totalMilliseconds": 81373
+          }
+         }
+        }
+       },
+       {
+        "item": {
+         "data": {
+          "uri": "spotify:track:0BTaaKT4RMbs5M73tOHX5Y",
+          "name": "Alcohol-Free",
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "TWICE"
+             }
+            }
+           ]
+          },
+          "duration": {
+           "totalMilliseconds": 210573
+          }
+         }
+        }
+       },
+       {
+        "item": {
+         "data": {
+          "uri": "spotify:track:4bjN59DRXFRxBE1g5ne6B1",
+          "name": "Haegeum",
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "Agust D"
+             }
+            }
+           ]
+          },
+          "duration": {
+           "totalMilliseconds": 168926
+          }
+         }
+        }
+       },
+       {
+        "item": {
+         "data": {
+          "uri": "spotify:track:0SfFCjldRnnbsIL65yqaEd",
+          "name": "Ejeh",
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "WOOJIN of LNGSHOT"
+             }
+            }
+           ]
+          },
+          "duration": {
+           "totalMilliseconds": 135000
+          }
+         }
+        }
+       },
+       {
+        "item": {
+         "data": {
+          "uri": "spotify:track:12hMMUrB2JxmNRtptwwqNo",
+          "name": "Don’t Say You Love Me",
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "Jin"
+             }
+            }
+           ]
+          },
+          "duration": {
+           "totalMilliseconds": 180716
+          }
+         }
+        }
+       },
+       {
+        "item": {
+         "data": {
+          "uri": "spotify:track:1SmH4LvoMHnRZItvXP7y2f",
+          "name": "All Good",
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "WOOJIN of LNGSHOT"
+             }
+            },
+            {
+             "profile": {
+              "name": "RYUL of LNGSHOT"
+             }
+            }
+           ]
+          },
+          "duration": {
+           "totalMilliseconds": 160000
+          }
+         }
+        }
+       }
+      ]
+     }
+    }
+   }
+  },
+  "track:\"Algorithm\" artist:\"HeeJin\"": {
+   "data": {
+    "searchV2": {
+     "tracksV2": {
+      "items": [
+       {
+        "item": {
+         "data": {
+          "uri": "spotify:track:2tGjh54bikVc5x3dl1pUKx",
+          "name": "Algorithm",
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "HeeJin"
+             }
+            }
+           ]
+          },
+          "duration": {
+           "totalMilliseconds": 188320
+          }
+         }
+        }
+       },
+       {
+        "item": {
+         "data": {
+          "uri": "spotify:track:219BWYqAdlhbNp9wHpXUkL",
+          "name": "Algorithm - Eng Ver.",
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "HeeJin"
+             }
+            }
+           ]
+          },
+          "duration": {
+           "totalMilliseconds": 187733
+          }
+         }
+        }
+       },
+       {
+        "item": {
+         "data": {
+          "uri": "spotify:track:582xAA2OloV2kcDqlC0fJ5",
+          "name": "Algorithm - Eng Rock Ver.",
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "HeeJin"
+             }
+            }
+           ]
+          },
+          "duration": {
+           "totalMilliseconds": 192386
+          }
+         }
+        }
+       }
+      ]
+     }
+    }
+   }
+  },
+  "LE SSERAFIM SPAGHETTI (Member ver.)": {
+   "data": {
+    "searchV2": {
+     "tracksV2": {
+      "items": [
+       {
+        "item": {
+         "data": {
+          "uri": "spotify:track:07ZkZzMHE6EEbHD50WUrgk",
+          "name": "SPAGHETTI (Member ver.)",
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "LE SSERAFIM"
+             }
+            }
+           ]
+          },
+          "duration": {
+           "totalMilliseconds": 136946
+          }
+         }
+        }
+       },
+       {
+        "item": {
+         "data": {
+          "uri": "spotify:track:5F7PjvRJWpaougysCAyN3n",
+          "name": "SPAGHETTI (Member ver.)",
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "LE SSERAFIM"
+             }
+            }
+           ]
+          },
+          "duration": {
+           "totalMilliseconds": 137360
+          }
+         }
+        }
+       },
+       {
+        "item": {
+         "data": {
+          "uri": "spotify:track:2N9miXnewVmUrgl6JSK1FI",
+          "name": "SPAGHETTI",
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "LE SSERAFIM"
+             }
+            },
+            {
+             "profile": {
+              "name": "j-hope"
+             }
+            }
+           ]
+          },
+          "duration": {
+           "totalMilliseconds": 172313
+          }
+         }
+        }
+       },
+       {
+        "item": {
+         "data": {
+          "uri": "spotify:track:41d2WjuL0ikRKVjxmL7ZFz",
+          "name": "BOOMPALA",
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "LE SSERAFIM"
+             }
+            }
+           ]
+          },
+          "duration": {
+           "totalMilliseconds": 176546
+          }
+         }
+        }
+       },
+       {
+        "item": {
+         "data": {
+          "uri": "spotify:track:4ly7INe0YNvJNZYXnp85PH",
+          "name": "SPAGHETTI",
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "LE SSERAFIM"
+             }
+            },
+            {
+             "profile": {
+              "name": "j-hope"
+             }
+            }
+           ]
+          },
+          "duration": {
+           "totalMilliseconds": 171720
+          }
+         }
+        }
+       },
+       {
+        "item": {
+         "data": {
+          "uri": "spotify:track:7EJGmMJgv0j6E8VuI7fa1s",
+          "name": "Loco-Co-Copiloto",
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "Punkarrita"
+             }
+            }
+           ]
+          },
+          "duration": {
+           "totalMilliseconds": 140439
+          }
+         }
+        }
+       },
+       {
+        "item": {
+         "data": {
+          "uri": "spotify:track:4IwZnXCHW3XX9i7iR5MTpw",
+          "name": "Pinocho",
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "Destripando la Historia"
+             }
+            }
+           ]
+          },
+          "duration": {
+           "totalMilliseconds": 178789
+          }
+         }
+        }
+       },
+       {
+        "item": {
+         "data": {
+          "uri": "spotify:track:4tves4OxbnL1jKN5J3WuJj",
+          "name": "Pinocho",
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "Destripando la Historia"
+             }
+            }
+           ]
+          },
+          "duration": {
+           "totalMilliseconds": 178789
+          }
+         }
+        }
+       },
+       {
+        "item": {
+         "data": {
+          "uri": "spotify:track:0PsT71zhC2rqzn9Kvlxi51",
+          "name": "Inventario (La Última Crónica)",
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "Santiuve"
+             }
+            }
+           ]
+          },
+          "duration": {
+           "totalMilliseconds": 694391
+          }
+         }
+        }
+       },
+       {
+        "item": {
+         "data": {
+          "uri": "spotify:track:3aEN06EHeF9kiyktSYNjFu",
+          "name": "SUMMERHOUSE",
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "Bratha"
+             }
+            }
+           ]
+          },
+          "duration": {
+           "totalMilliseconds": 170880
+          }
+         }
+        }
+       }
+      ]
+     }
+    }
+   }
+  },
+  "track:\"SPAGHETTI (Member ver.)\" artist:\"LE SSERAFIM\"": {
+   "data": {
+    "searchV2": {
+     "tracksV2": {
+      "items": [
+       {
+        "item": {
+         "data": {
+          "uri": "spotify:track:07ZkZzMHE6EEbHD50WUrgk",
+          "name": "SPAGHETTI (Member ver.)",
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "LE SSERAFIM"
+             }
+            }
+           ]
+          },
+          "duration": {
+           "totalMilliseconds": 136946
+          }
+         }
+        }
+       },
+       {
+        "item": {
+         "data": {
+          "uri": "spotify:track:5F7PjvRJWpaougysCAyN3n",
+          "name": "SPAGHETTI (Member ver.)",
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "LE SSERAFIM"
+             }
+            }
+           ]
+          },
+          "duration": {
+           "totalMilliseconds": 137360
+          }
+         }
+        }
+       }
+      ]
+     }
+    }
+   }
+  },
+  "tripleS Dimension (AAA Ver.)": {
+   "data": {
+    "searchV2": {
+     "tracksV2": {
+      "items": [
+       {
+        "item": {
+         "data": {
+          "uri": "spotify:track:6gix4NyPtppr6x1DrncDfv",
+          "name": "Dimension (AAA Ver.)",
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "tripleS"
+             }
+            }
+           ]
+          },
+          "duration": {
+           "totalMilliseconds": 191493
+          }
+         }
+        }
+       },
+       {
+        "item": {
+         "data": {
+          "uri": "spotify:track:1LNQJXd09tqJqq9fLoUGol",
+          "name": "Dimension (AAA Ver.) (Inst.)",
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "tripleS"
+             }
+            }
+           ]
+          },
+          "duration": {
+           "totalMilliseconds": 191480
+          }
+         }
+        }
+       },
+       {
+        "item": {
+         "data": {
+          "uri": "spotify:track:4Gy0jr5kuKDViaPN2QS5it",
+          "name": "Dimension (KRE Ver.)",
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "tripleS"
+             }
+            }
+           ]
+          },
+          "duration": {
+           "totalMilliseconds": 183333
+          }
+         }
+        }
+       },
+       {
+        "item": {
+         "data": {
+          "uri": "spotify:track:56YpKghQhVIGN5CM9hO3A7",
+          "name": "Dimension (KRE Ver.) (Inst.)",
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "tripleS"
+             }
+            }
+           ]
+          },
+          "duration": {
+           "totalMilliseconds": 183320
+          }
+         }
+        }
+       },
+       {
+        "item": {
+         "data": {
+          "uri": "spotify:track:6wXmLFm3UrdGydNRyFexi3",
+          "name": "Dimension",
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "tripleS"
+             }
+            }
+           ]
+          },
+          "duration": {
+           "totalMilliseconds": 197333
+          }
+         }
+        }
+       },
+       {
+        "item": {
+         "data": {
+          "uri": "spotify:track:7HKNLX7ubjp4KKsk4tI98f",
+          "name": "Dimension (Inst.)",
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "tripleS"
+             }
+            }
+           ]
+          },
+          "duration": {
+           "totalMilliseconds": 197333
+          }
+         }
+        }
+       },
+       {
+        "item": {
+         "data": {
+          "uri": "spotify:track:1rIMSGuRwJQXwnLG5LjPRy",
+          "name": "Door",
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "tripleS"
+             }
+            }
+           ]
+          },
+          "duration": {
+           "totalMilliseconds": 188026
+          }
+         }
+        }
+       },
+       {
+        "item": {
+         "data": {
+          "uri": "spotify:track:134Ur6qfMLGcyWUTnZG6CF",
+          "name": "Q&A",
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "tripleS"
+             }
+            }
+           ]
+          },
+          "duration": {
+           "totalMilliseconds": 206000
+          }
+         }
+        }
+       },
+       {
+        "item": {
+         "data": {
+          "uri": "spotify:track:30WFuJJO5FdTc0VkZ1kedR",
+          "name": "DNA (Dream N Access)",
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "tripleS"
+             }
+            }
+           ]
+          },
+          "duration": {
+           "totalMilliseconds": 162000
+          }
+         }
+        }
+       },
+       {
+        "item": {
+         "data": {
+          "uri": "spotify:track:1r5gvtP7ownS7PL0YTWoqe",
+          "name": "S",
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "tripleS"
+             }
+            }
+           ]
+          },
+          "duration": {
+           "totalMilliseconds": 73266
+          }
+         }
+        }
+       }
+      ]
+     }
+    }
+   }
+  },
+  "track:\"Dimension (AAA Ver.)\" artist:\"tripleS\"": {
+   "data": {
+    "searchV2": {
+     "tracksV2": {
+      "items": [
+       {
+        "item": {
+         "data": {
+          "uri": "spotify:track:6gix4NyPtppr6x1DrncDfv",
+          "name": "Dimension (AAA Ver.)",
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "tripleS"
+             }
+            }
+           ]
+          },
+          "duration": {
+           "totalMilliseconds": 191493
+          }
+         }
+        }
+       },
+       {
+        "item": {
+         "data": {
+          "uri": "spotify:track:1LNQJXd09tqJqq9fLoUGol",
+          "name": "Dimension (AAA Ver.) (Inst.)",
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "tripleS"
+             }
+            }
+           ]
+          },
+          "duration": {
+           "totalMilliseconds": 191480
+          }
+         }
+        }
+       }
+      ]
+     }
+    }
+   }
+  },
+  "fcj & JUNA options": {
+   "data": {
+    "searchV2": {
+     "tracksV2": {
+      "items": [
+       {
+        "item": {
+         "data": {
+          "uri": "spotify:track:5Y0vNP5f0uFXBevq5YU6cY",
+          "name": "options",
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "fcj"
+             }
+            },
+            {
+             "profile": {
+              "name": "JUNA"
+             }
+            }
+           ]
+          },
+          "duration": {
+           "totalMilliseconds": 153428
+          }
+         }
+        }
+       },
+       {
+        "item": {
+         "data": {
+          "uri": "spotify:track:4y8sA04EhAzrfD94U7BnhG",
+          "name": "over u",
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "fcj"
+             }
+            },
+            {
+             "profile": {
+              "name": "JUNA"
+             }
+            },
+            {
+             "profile": {
+              "name": "Kris Rey"
+             }
+            }
+           ]
+          },
+          "duration": {
+           "totalMilliseconds": 140640
+          }
+         }
+        }
+       },
+       {
+        "item": {
+         "data": {
+          "uri": "spotify:track:6rd3MctxNvnAJi7sihwAGS",
+          "name": "Groove Armada - Live at Portola Music Festival 2026",
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "Groove Armada"
+             }
+            }
+           ]
+          },
+          "duration": {
+           "totalMilliseconds": 4348693
+          }
+         }
+        }
+       },
+       {
+        "item": {
+         "data": {
+          "uri": "spotify:track:43lE3hIoimJYTfqJASVODl",
+          "name": "Heavy Heart",
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "FKJ"
+             }
+            },
+            {
+             "profile": {
+              "name": "Bas"
+             }
+            }
+           ]
+          },
+          "duration": {
+           "totalMilliseconds": 163912
+          }
+         }
+        }
+       },
+       {
+        "item": {
+         "data": {
+          "uri": "spotify:track:1wbvpCmmny9tLKbJbXLdc5",
+          "name": "Open",
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "FKJ"
+             }
+            }
+           ]
+          },
+          "duration": {
+           "totalMilliseconds": 80590
+          }
+         }
+        }
+       },
+       {
+        "item": {
+         "data": {
+          "uri": "spotify:track:7Dog34WCyAePaqC0Jchbxy",
+          "name": "F*Ck",
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "Bee Blizz"
+             }
+            }
+           ]
+          },
+          "duration": {
+           "totalMilliseconds": 209667
+          }
+         }
+        }
+       },
+       {
+        "item": {
+         "data": {
+          "uri": "spotify:track:333Kt2zzWgHpW0BJtyPXiY",
+          "name": "Max Styler - Live at Portola Music Festival",
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "Max Styler"
+             }
+            }
+           ]
+          },
+          "duration": {
+           "totalMilliseconds": 4743082
+          }
+         }
+        }
+       },
+       {
+        "item": {
+         "data": {
+          "uri": "spotify:track:1ZeEXkAjpNb9NCNwfnyWvg",
+          "name": "Bang",
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "Juda Jay"
+             }
+            }
+           ]
+          },
+          "duration": {
+           "totalMilliseconds": 205480
+          }
+         }
+        }
+       },
+       {
+        "item": {
+         "data": {
+          "uri": "spotify:track:4dOyH0TzsX6Qlbnyd9VDnu",
+          "name": "Badditude",
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "Nanu"
+             }
+            }
+           ]
+          },
+          "duration": {
+           "totalMilliseconds": 166289
+          }
+         }
+        }
+       },
+       {
+        "item": {
+         "data": {
+          "uri": "spotify:track:7b4jolKbnJxzHkdERbbIKg",
+          "name": "GMD freestyle",
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "MANDAR"
+             }
+            }
+           ]
+          },
+          "duration": {
+           "totalMilliseconds": 163206
+          }
+         }
+        }
+       }
+      ]
+     }
+    }
+   }
+  },
+  "track:\"options\" artist:\"fcj & JUNA\"": {
+   "data": {
+    "searchV2": {
+     "tracksV2": {
+      "items": [
+       {
+        "item": {
+         "data": {
+          "uri": "spotify:track:5Y0vNP5f0uFXBevq5YU6cY",
+          "name": "options",
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "fcj"
+             }
+            },
+            {
+             "profile": {
+              "name": "JUNA"
+             }
+            }
+           ]
+          },
+          "duration": {
+           "totalMilliseconds": 153428
+          }
+         }
+        }
+       }
+      ]
+     }
+    }
+   }
+  },
+  "IZ*ONE (아이즈원) 라비앙로즈 (La Vie en Rose)": {
+   "data": {
+    "searchV2": {
+     "tracksV2": {
+      "items": [
+       {
+        "item": {
+         "data": {
+          "uri": "spotify:track:3WfaJhCL4p2JbdffJjV6Va",
+          "name": "La Vie en Rose",
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "IZ*ONE"
+             }
+            }
+           ]
+          },
+          "duration": {
+           "totalMilliseconds": 218993
+          }
+         }
+        }
+       },
+       {
+        "item": {
+         "data": {
+          "uri": "spotify:track:6MksZu2sx5jzoPszxbRZMw",
+          "name": "Rose",
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "LEEHI"
+             }
+            }
+           ]
+          },
+          "duration": {
+           "totalMilliseconds": 222287
+          }
+         }
+        }
+       },
+       {
+        "item": {
+         "data": {
+          "uri": "spotify:track:49MPmugdYASigqRnFa9MBk",
+          "name": "La Vie en Rose (라비앙로즈) (Originally Perfomed By IZ*ONE(아이즈원)) - Melody Karaoke Version",
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "ZZang KARAOKE"
+             }
+            }
+           ]
+          },
+          "duration": {
+           "totalMilliseconds": 219500
+          }
+         }
+        }
+       },
+       {
+        "item": {
+         "data": {
+          "uri": "spotify:track:6kpMnoh8ZESDaQddOdTVoi",
+          "name": "La Vie en Rose (라비앙로즈) (Originally Perfomed By IZ*ONE(아이즈원)) - Instrumental Karaoke Version",
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "ZZang KARAOKE"
+             }
+            }
+           ]
+          },
+          "duration": {
+           "totalMilliseconds": 219500
+          }
+         }
+        }
+       },
+       {
+        "item": {
+         "data": {
+          "uri": "spotify:track:2ayIgfvWo3SfYP2pVOr4pC",
+          "name": "Gone",
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "ROSÉ"
+             }
+            }
+           ]
+          },
+          "duration": {
+           "totalMilliseconds": 207163
+          }
+         }
+        }
+       },
+       {
+        "item": {
+         "data": {
+          "uri": "spotify:track:30UnUScewQPPZm82nVp81J",
+          "name": "Life in Pink",
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "The Ready Set"
+             }
+            }
+           ]
+          },
+          "duration": {
+           "totalMilliseconds": 202000
+          }
+         }
+        }
+       },
+       {
+        "item": {
+         "data": {
+          "uri": "spotify:track:5htgsPJg54b80jzdzfIbJ9",
+          "name": "Reine des Roses",
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "XHz Official"
+             }
+            },
+            {
+             "profile": {
+              "name": "蛋喜"
+             }
+            }
+           ]
+          },
+          "duration": {
+           "totalMilliseconds": 252000
+          }
+         }
+        }
+       },
+       {
+        "item": {
+         "data": {
+          "uri": "spotify:track:7zOyWqFGjoSjswmWWDukhA",
+          "name": "Heaven Can Wait",
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "JUNNY"
+             }
+            }
+           ]
+          },
+          "duration": {
+           "totalMilliseconds": 208105
+          }
+         }
+        }
+       },
+       {
+        "item": {
+         "data": {
+          "uri": "spotify:track:2shyarF21wZvWew00TdaP3",
+          "name": "Rose - English Version",
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "D.O."
+             }
+            }
+           ]
+          },
+          "duration": {
+           "totalMilliseconds": 153706
+          }
+         }
+        }
+       },
+       {
+        "item": {
+         "data": {
+          "uri": "spotify:track:0xQIAx8jUcBcz22eZB3P7n",
+          "name": "DEVELOP",
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "J SOUL BROTHERS III"
+             }
+            }
+           ]
+          },
+          "duration": {
+           "totalMilliseconds": 164266
+          }
+         }
+        }
+       }
+      ]
+     }
+    }
+   }
+  },
+  "track:\"라비앙로즈 (La Vie en Rose)\" artist:\"IZ*ONE (아이즈원)\"": {
+   "data": {
+    "searchV2": {
+     "tracksV2": {
+      "items": [
+       {
+        "item": {
+         "data": {
+          "uri": "spotify:track:3WfaJhCL4p2JbdffJjV6Va",
+          "name": "La Vie en Rose",
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "IZ*ONE"
+             }
+            }
+           ]
+          },
+          "duration": {
+           "totalMilliseconds": 218993
+          }
+         }
+        }
+       }
+      ]
+     }
+    }
+   }
+  },
+  "A2O & A2O LITE NEON": {
+   "data": {
+    "searchV2": {
+     "tracksV2": {
+      "items": [
+       {
+        "item": {
+         "data": {
+          "uri": "spotify:track:5PvLNQRNRj61y3CU4SFIY4",
+          "name": "NEON",
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "A2O LITE"
+             }
+            },
+            {
+             "profile": {
+              "name": "A2O"
+             }
+            }
+           ]
+          },
+          "duration": {
+           "totalMilliseconds": 208000
+          }
+         }
+        }
+       },
+       {
+        "item": {
+         "data": {
+          "uri": "spotify:track:3oiikhWraUTZVfGBF0OtFx",
+          "name": "Love Got Me Ooh",
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "A2O"
+             }
+            },
+            {
+             "profile": {
+              "name": "A2O MAY"
+             }
+            }
+           ]
+          },
+          "duration": {
+           "totalMilliseconds": 165000
+          }
+         }
+        }
+       },
+       {
+        "item": {
+         "data": {
+          "uri": "spotify:track:0p8W9fPwHQTxwFjYpPhRia",
+          "name": "A2O SOUL 'SUPERSTAR' Official Performance Video",
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "A2O"
+             }
+            },
+            {
+             "profile": {
+              "name": "A2O SOUL"
+             }
+            }
+           ]
+          },
+          "duration": {
+           "totalMilliseconds": 252394
+          }
+         }
+        }
+       },
+       {
+        "item": {
+         "data": {
+          "uri": "spotify:track:1A5FZa0Bf8kFAnhwU6ytPR",
+          "name": "We Feel Good Tonight (Raise Your Light)",
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "Benetti House Bar"
+             }
+            }
+           ]
+          },
+          "duration": {
+           "totalMilliseconds": 257479
+          }
+         }
+        }
+       },
+       {
+        "item": {
+         "data": {
+          "uri": "spotify:track:3EjlSx3zTzX3g3TIbLjOK6",
+          "name": "Neon Lights",
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "GoldenEMP"
+             }
+            },
+            {
+             "profile": {
+              "name": "Sinewave Fox"
+             }
+            }
+           ]
+          },
+          "duration": {
+           "totalMilliseconds": 193280
+          }
+         }
+        }
+       },
+       {
+        "item": {
+         "data": {
+          "uri": "spotify:track:7cA9UNJ2FqLnzF6v5UbWut",
+          "name": "Light on My Lips",
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "Benetti Chill House Bar"
+             }
+            }
+           ]
+          },
+          "duration": {
+           "totalMilliseconds": 194759
+          }
+         }
+        }
+       },
+       {
+        "item": {
+         "data": {
+          "uri": "spotify:track:1syJZ0EC4e4Fx7yMQ7kPEg",
+          "name": "A Slice of Life, Pt. II",
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "Neon Lights"
+             }
+            }
+           ]
+          },
+          "duration": {
+           "totalMilliseconds": 191551
+          }
+         }
+        }
+       },
+       {
+        "item": {
+         "data": {
+          "uri": "spotify:track:1CFWhVMC3pc1Hg0KMOjZT9",
+          "name": "Icons",
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "Danger Twins"
+             }
+            }
+           ]
+          },
+          "duration": {
+           "totalMilliseconds": 193058
+          }
+         }
+        }
+       },
+       {
+        "item": {
+         "data": {
+          "uri": "spotify:track:7GHY6F8mu0lxNwGLsM8fCD",
+          "name": "HANOI NEVER SLEEPS!",
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "SVEN WRKR"
+             }
+            }
+           ]
+          },
+          "duration": {
+           "totalMilliseconds": 346520
+          }
+         }
+        }
+       },
+       {
+        "item": {
+         "data": {
+          "uri": "spotify:track:1EKEtpTQGHKfGtzcNKgZ6E",
+          "name": "Abia Rama Bia",
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "Adazion Ij"
+             }
+            }
+           ]
+          },
+          "duration": {
+           "totalMilliseconds": 545578
+          }
+         }
+        }
+       }
+      ]
+     }
+    }
+   }
+  },
+  "track:\"NEON\" artist:\"A2O & A2O LITE\"": {
+   "data": {
+    "searchV2": {
+     "tracksV2": {
+      "items": [
+       {
+        "item": {
+         "data": {
+          "uri": "spotify:track:5PvLNQRNRj61y3CU4SFIY4",
+          "name": "NEON",
+          "artists": {
+           "items": [
+            {
+             "profile": {
+              "name": "A2O LITE"
+             }
+            },
+            {
+             "profile": {
+              "name": "A2O"
+             }
+            }
+           ]
+          },
+          "duration": {
+           "totalMilliseconds": 208000
+          }
+         }
+        }
+       }
+      ]
+     }
+    }
+   }
+  }
+ }
+}

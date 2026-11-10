@@ -1,10 +1,11 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { matchCandidates, matchVideoCandidates } from '../src/matcher.js';
 import { YtMusicProvider } from '../src/ytmusic-provider.js';
 import { Conversion } from '../src/conversion.js';
 import { DeezerClient } from '../src/deezer.js';
+import type { Provider } from '../src/types.js';
 
 const fixture = (name: string) => JSON.parse(readFileSync(join(import.meta.dirname, 'fixtures/ytmusic', `${name}.json`), 'utf8')) as unknown;
 
@@ -110,12 +111,14 @@ describe('YtMusicProvider.readPlaylist', () => {
     expect(spy).not.toHaveBeenCalled();
   });
 
-  it('converts the catalog songs and holds the music videos back as skipped', async () => {
-    stubInnertube(() => fixture('playlist-mixed-types'));
+  it('holds back the music videos whose song the catalog does not have', async () => {
+    stubInnertube((path) => (path === 'search' ? {} : fixture('playlist-mixed-types')));
     const { tracks, skipped } = await provider().readPlaylist('PLtest');
     expect(tracks).toHaveLength(1); // only the ATV entry
     expect(skipped.length).toBeGreaterThanOrEqual(3);
     expect(skipped.every((s) => s.name)).toBe(true);
+    // An entry with no type at all is an unavailable track, reported as that, not as a music video.
+    expect(skipped.some((s) => s.reason === 'unavailable on YouTube Music, or not music')).toBe(true);
   });
 
   it('accepts Liked Music and album playlists as sources', async () => {
@@ -131,7 +134,7 @@ describe('skipped videos in the report', () => {
   afterEach(() => vi.unstubAllGlobals());
 
   it('records them distinctly from tracks that were searched for and not found', async () => {
-    stubInnertube(() => fixture('playlist-mixed-types'));
+    stubInnertube((path) => (path === 'search' ? {} : fixture('playlist-mixed-types')));
     const deezer = new DeezerClient('arl');
     vi.spyOn(deezer, 'search').mockResolvedValue(null); // the one real song finds no match
     const conversion = new Conversion(provider(), deezer, 'report.csv');
@@ -143,6 +146,70 @@ describe('skipped videos in the report', () => {
     expect(unmatched).toHaveLength(1);
     expect(skipped[0].note).toContain('music video');
     expect(conversion.rows.every((r) => r.source === 'YouTube Music' && r.target === 'Deezer')).toBe(true);
+  });
+});
+
+// ── Music videos as a source ─────────────────────────────────────────────────────────────────────
+// A real stretch of a playlist: a song, nine music videos, a song, and a fan's lyric video. Each
+// video searches the catalog as the provider does; every response is recorded from the live service.
+describe('music videos in a source playlist', () => {
+  beforeEach(() => { vi.stubGlobal('setTimeout', (fn: () => void) => { fn(); return 0 as unknown as NodeJS.Timeout; }); });
+  afterEach(() => vi.unstubAllGlobals());
+
+  const searches = fixture('search-music-videos') as Record<string, unknown>;
+  const stubVideoPlaylist = () => stubInnertube((path, body) => {
+    if (path === 'browse') return fixture('playlist-music-videos');
+    const recorded = path === 'search' ? searches[String(body.query)] : undefined;
+    if (!recorded) throw new Error(`no recorded response for ${path} "${String(body.query)}"`);
+    return recorded;
+  });
+
+  it('converts each music video as the catalog song it carries, in playlist order', async () => {
+    stubVideoPlaylist();
+    const { tracks, skipped } = await provider().readPlaylist('PLtest');
+    expect(tracks.map((t) => t.name)).toEqual(['Dirty Work', 'Dark Arts', 'MILLION PLACES', 'Really Like You', 'NOT CUTE ANYMORE', 'Pretty Please', 'APT. (feat. Dangle)', 'options', 'Way to You', '라비앙로즈 (La Vie en Rose)', 'I’ll Like You']);
+    expect(tracks.filter((t) => t.video).map((t) => [t.artist, t.durationMs, t.video])).toEqual([
+      ['aespa', 182_000, 'Dark Arts'],
+      ['XG', 205_000, 'XG - MILLION PLACES (Official Music Video)'],
+      ['BABYMONSTER', 198_000, 'Really Like You'],
+      ['ILLIT', 132_000, 'NOT CUTE ANYMORE'],
+      ['Hearts2Hearts', 205_000, 'Pretty Please'],
+      ['TsunamiCat', 164_000, 'APT. - ROSÉ & Bruno Mars | Cover by TsunamiCat and Dangle'], // the cover is what the video carries
+      ['fcj & JUNA', 154_000, 'fcj - options (w/ JUNA)'],
+      ['Yunsae', 196_000, 'Way to You'],
+      ['IZ*ONE (아이즈원)', 219_000, 'La Vie en Rose'],
+    ]);
+    // The lyric video names the singers in Latin script where the catalog credits them in Hangul.
+    expect(skipped.map((s) => s.artist)).toEqual(['pomu']);
+  });
+
+  it('costs one video, not the whole read, when its song lookup keeps failing', async () => {
+    stubInnertube((path, body) => {
+      if (path === 'browse') return fixture('playlist-music-videos');
+      if (String(body.query).includes('Dark Arts')) throw new Error('429 Too Many Requests');
+      return searches[String(body.query)] ?? {};
+    });
+    const { tracks, skipped } = await provider().readPlaylist('PLtest');
+    expect(tracks).toHaveLength(10);
+    expect(skipped).toContainEqual({ name: 'Dark Arts', artist: 'aespa', reason: 'music video, song lookup failed' });
+  });
+
+  it('reports a converted video under its song, noting the video it came from', async () => {
+    stubVideoPlaylist();
+    const target: Provider = {
+      name: 'Target',
+      readPlaylist: async () => ({ tracks: [], truncated: false }),
+      search: async (t) => ({ id: t.name, title: t.name, artist: t.artist, method: 'exact' }),
+      createPlaylist: async () => 'new',
+      addTracks: async (_id, ids) => ids.length,
+      getPlaylistTrackIds: async () => new Set(),
+      listPlaylists: async () => [],
+    };
+    const conversion = new Conversion(provider(), target, 'report.csv');
+    await conversion.matchPlaylist({ name: 'Videos', uri: 'PLtest' });
+    expect(conversion.rows.find((r) => r.title === 'MILLION PLACES')).toMatchObject({ matched: true, note: 'from music video "XG - MILLION PLACES (Official Music Video)"' });
+    expect(conversion.rows.find((r) => r.title === 'Dirty Work')).toMatchObject({ matched: true, note: null });
+    expect(conversion.rows.filter((r) => r.note?.startsWith('skipped:')).map((r) => r.artist)).toEqual(['pomu']);
   });
 });
 

@@ -2,7 +2,75 @@
 
 **Handoff log for the next session.** This file tracks what changed and what's left. For *how the system works* read `ARCHITECTURE.md`; for *setup/credentials* read `CONFIG.md`.
 
-Updated: 2026-08-17
+Updated: 2026-11-09
+
+## 2026-11-10 — review fixes on the matcher and music-video work
+
+- **A failed song lookup costs one video, not the playlist.** `resolveVideo` catches and the entry is
+  skipped as "song lookup failed"; lookups reuse `searchItems`, are paced like the conversion (300ms),
+  and the read logs how many videos it is resolving.
+- **Only real videos are resolved.** `YtItem.isVideo` (OMV/UGC/official-source); an entry with no
+  type (unavailable) or a podcast episode is skipped with that reason. `Skipped` now carries `reason`.
+- **`songForVideo` guards.** A bracket that is a version or guest tag ("Sped up", "feat. Dangle") is
+  never an alternate name; the artist must be named as whole words ("V" no longer matches "Love").
+- **`matchByTitle` is cross-script only**, and one artist with two ids (single + album) is one match.
+- **Verification re-checks under the accepting tier**, so title-only/duration-only matches are no
+  longer always flagged `⚠️ recheck`.
+- **`fieldQuery`** (Spotify + Deezer) drops double quotes and omits an empty artist field.
+- A video left out for its song twin no longer carries `method`; the summary line counts what was
+  actually converted.
+- Live, read-only: the two video-heavy playlists lost no resolution and gained 3 (165 of 199); My
+  Hanni dry-run: 202 converted, 0 recheck.
+
+## 2026-11-09 (b) — music videos convert as the song they carry
+
+A YouTube Music source no longer skips music videos: the user's intent is the music. Each non-song
+entry is resolved to its catalog song by a YouTube Music songs search (`songForVideo`, matcher), then
+converted as that song; only a video that carries no catalog song is still skipped.
+
+- **No shortcut via `next`.** The player's song/video counterpart came back empty for all ten
+  official videos tried, with the web client's full request body. Resolution is by search.
+- **Duration is no guard.** Official videos ran 6–28s longer than their song (intros, dance
+  breaks); fan re-uploads ran up to 25s shorter. Title (whole words, tags kept) and a named lead
+  artist carry it.
+- **Query: channel + title, then title alone.** The channel first finds bare-titled official videos
+  ("Way to You", by Yunsae); a re-upload channel ("splash.mp3") only muddies it. YouTube Music also
+  returns different results for the identical query from one call to the next, which the second
+  query covers.
+- **YouTube Music mislabels songs.** The same catalog song can read as `UGC` on one browse and `ATV`
+  on the next (9 of 201 in one read). Those used to be dropped as "music videos"; they now resolve
+  back to themselves.
+- **A video next to its own song gives way.** Converting both put the song at the video's (earlier)
+  position. Now the video row is marked skipped and the song keeps its place; a video alone still
+  converts. Compared on target ids in `Conversion`, not source ids.
+- Measured on two video-heavy playlists: 162 of 199 videos resolved, every pair checked by hand
+  correct. The rest are mostly re-uploads of songs not in the catalog.
+- Pinned by `tests/ytmusic-provider.test.ts` on recorded responses
+  (`tests/fixtures/ytmusic/{playlist,search}-music-videos.json`) and guard tests in `matcher.test.ts`.
+
+## 2026-11-09 — YouTube Music → Spotify lost tracks Spotify carries
+
+A real 224-entry conversion ("My Hanni") reached Spotify as 197 tracks. Writes and the read were
+fine (all 197 matched ids landed; YouTube Music's header said 224, plx read 224). Most of the gap is
+by design — 12 repeated songs deduped, 10 music videos skipped (8 of them duplicates of songs in the
+same playlist). The real losses were in matching, one root cause each:
+
+- **"ROSÉ & Bruno Mars"** — YouTube Music credits co-artists as one string; `firstArtist` split only
+  on `,`, so it never equalled Spotify's "ROSÉ". Comparisons now key on the lead artist (`,` and
+  ` & `), on both sides so "Chase & Status" still equals itself. Search terms are unchanged.
+- **지효 vs JIHYO** — every tier needed the artist to agree. New last-resort tier `title-only`
+  (`matchByTitle`): equal title, ±2s, unique — the mirror of `duration-only`. Wired into all three
+  providers, since the transliteration breaks every direction that touches YouTube Music.
+- **"ILLIT Pop"** — free text returns ILLIT's hits, not "Pop". Spotify now retries a miss in field
+  syntax, as Deezer already did.
+- **"Algorithm (Eng Ver.)" → the original** — `normalize` drops a bracketed tag that Spotify writes as
+  a suffix ("Algorithm - Eng Ver."), so the untagged original compared equal. `exact` now takes a
+  tag-kept title match first. Same bug picked "Life's Too Short (English Version)" for the original,
+  "Lucky (Korean Ver.)" for "Lucky", and plain "Cupid" for "Cupid (Twin Version)".
+
+Replayed live over the whole playlist: 214/214 songs matched (was 210), 201 unique (was 197), and
+every row that changed is a correction. Pinned by `tests/spotify-search.test.ts`, on searches
+recorded from the live service (`tests/fixtures/spotify/search-my-hanni.json`).
 
 ## 2026-08-17 (e) — the provider is complete
 

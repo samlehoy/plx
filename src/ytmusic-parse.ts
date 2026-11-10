@@ -16,12 +16,16 @@ export type YtItem = {
   artist: string;
   durationSec: number | null;
   isSong: boolean;
+  // A video — official, user upload, or official-source — as opposed to a song, an unavailable entry
+  // with no type at all, or a podcast episode. Only a video carries a song worth resolving.
+  isVideo: boolean;
 };
 
 // Only a catalog release (ATV) counts as a song. Everything else — an official music video, an
 // official-source upload, a user upload, a podcast — is a video whose stated artist is the channel.
 // An entry with no type at all is an unavailable/removed track and is treated the same way.
 const SONG_TYPE = 'MUSIC_VIDEO_TYPE_ATV';
+const PODCAST_TYPE = 'MUSIC_VIDEO_TYPE_PODCAST_EPISODE';
 
 type Runs = { runs?: Array<{ text?: string }> };
 const runsText = (t: Runs | undefined) => t?.runs?.map((r) => r.text ?? '').join('') ?? '';
@@ -88,13 +92,15 @@ function parseItem(renderer: Renderer): YtItem | null {
   const trailing = subtitleParts.length > 1 ? subtitleParts[subtitleParts.length - 1] : '';
   const durationSec = parseDuration(fixed) ?? parseDuration(trailing);
 
+  const type = watch?.watchEndpointMusicSupportedConfigs?.watchEndpointMusicConfig?.musicVideoType;
   return {
     videoId,
     setVideoId: renderer.playlistItemData?.playlistSetVideoId,
     title,
     artist: subtitleParts[0] ?? '',
     durationSec,
-    isSong: watch?.watchEndpointMusicSupportedConfigs?.watchEndpointMusicConfig?.musicVideoType === SONG_TYPE,
+    isSong: type === SONG_TYPE,
+    isVideo: Boolean(type) && type !== SONG_TYPE && type !== PODCAST_TYPE,
   };
 }
 
