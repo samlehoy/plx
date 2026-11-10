@@ -7,6 +7,7 @@ import { writeCsv } from '../src/csv.js';
 import { mkdtemp } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
+import type { Provider } from '../src/types.js';
 
 function mockFetch(handler: (url: string, init?: RequestInit) => unknown, status = 200): void {
   vi.stubGlobal('fetch', vi.fn().mockImplementation(async (url: string, init?: RequestInit) => {
@@ -196,5 +197,34 @@ describe('CSV quoting', () => {
     expect(content).toContain('"Song ""X"""');
     expect(content).toContain(',123,exact,ok');
     expect(content.split('\n')[0]).toBe('playlist,source,target,title,artist,isrc,matched,target_id,method,note');
+  });
+});
+
+// A source playlist holding a song both as its music video and as the song itself.
+describe('a music video next to its own song', () => {
+  beforeEach(() => { vi.stubGlobal('setTimeout', (fn: () => void) => { fn(); return 0 as unknown as NodeJS.Timeout; }); });
+  afterEach(() => vi.unstubAllGlobals());
+
+  const stub = (over: Partial<Provider>): Provider => ({
+    name: 'Stub', readPlaylist: async () => ({ tracks: [], truncated: false }), search: async () => null,
+    createPlaylist: async () => 'new', addTracks: async (_p, ids) => ids.length, getPlaylistTrackIds: async () => new Set(), listPlaylists: async () => [], ...over,
+  });
+  // The video and the song are different source entries that land on the same target track.
+  const source = stub({ readPlaylist: async () => ({ truncated: false, tracks: [
+    { name: 'Dark Arts', artist: 'aespa', durationMs: 182_000, video: 'Dark Arts (Official MV)' },
+    { name: 'Whiplash', artist: 'aespa', durationMs: 183_000 },
+    { name: 'Dark Arts', artist: 'aespa', durationMs: 182_000 },
+    { name: 'Solo', artist: 'JENNIE', durationMs: 169_000, video: 'JENNIE - SOLO M/V' },
+  ] }) });
+  const target = stub({ search: async (t) => ({ id: `id:${t.name}`, title: t.name, artist: t.artist, method: 'exact' }) });
+
+  it('keeps the song in its own place, leaves the video out, and still converts a video alone', async () => {
+    const conversion = new Conversion(source, target, 'report.csv');
+    const { matchedIds } = await conversion.matchPlaylist({ name: 'P', uri: 'p' });
+    expect(matchedIds).toEqual(['id:Whiplash', 'id:Dark Arts', 'id:Solo']);
+    const darkArts = conversion.rows.filter((r) => r.title === 'Dark Arts');
+    expect(darkArts[0]).toMatchObject({ matched: false, method: null, target_id: 'id:Dark Arts', note: 'skipped: music video, its song is already in the playlist (id:Dark Arts)' });
+    expect(darkArts[1]).toMatchObject({ matched: true, method: 'exact' });
+    expect(conversion.rows.find((r) => r.title === 'Solo')).toMatchObject({ matched: true, note: 'from music video "JENNIE - SOLO M/V"' });
   });
 });

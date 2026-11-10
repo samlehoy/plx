@@ -1,4 +1,4 @@
-import { matchCandidates } from './matcher.js';
+import { matchByDuration, matchByTitle, matchCandidates } from './matcher.js';
 import { writeCsv } from './csv.js';
 import type { Match, MatchResult, PlaylistRef, Provider, ReportRow, Track } from './types.js';
 
@@ -17,7 +17,7 @@ export class Conversion {
   constructor(private readonly source: Provider, private readonly target: Provider, private readonly output: string) {}
   // Every row carries the direction that produced it, so the file still makes sense a month later
   // and a report from one of six directions is not mistaken for another.
-  private record(row: ReportRow) { this.rows.push({ ...row, source: this.source.name, target: this.target.name }); }
+  private record(row: ReportRow): ReportRow { const full = { ...row, source: this.source.name, target: this.target.name }; this.rows.push(full); return full; }
 
   async matchPlaylist(playlist: PlaylistRef, dryRun = false): Promise<MatchResult> {
     let result;
@@ -39,12 +39,11 @@ export class Conversion {
     // Entries the source refused to convert are recorded before the matched ones, as their own kind
     // of row: they were never searched for, so calling them "no match" would misreport them.
     for (const entry of result.skipped ?? []) {
-      this.record({ playlist: playlist.name, title: entry.name, artist: entry.artist, isrc: null, matched: false, note: 'skipped: music video (channel name is not a reliable artist)' });
+      this.record({ playlist: playlist.name, title: entry.name, artist: entry.artist, isrc: null, matched: false, note: `skipped: ${entry.reason}` });
     }
-    if (result.skipped?.length) console.log(`[${playlist.name}] ${result.skipped.length} music video${result.skipped.length === 1 ? '' : 's'} skipped.`);
+    if (result.skipped?.length) console.log(`[${playlist.name}] ${result.skipped.length} entr${result.skipped.length === 1 ? 'y' : 'ies'} skipped (see the report).`);
 
-    const matchedIds: string[] = [];
-    let verified = 0;
+    const matched: Array<{ id: string; fromVideo: boolean; verified: boolean; row: ReportRow }> = [];
     for (let i = 0; i < result.tracks.length; i += 1) {
       const track = result.tracks[i];
       let match: Match | null = null;
@@ -52,22 +51,32 @@ export class Conversion {
         try { match = await this.target.search(track); break; }
         catch (error) { if (attempt === 2) console.log(`  ⚠️ search failed: ${error instanceof Error ? error.message : 'error'}`); else await sleep(2 ** attempt * 1000); }
       }
+      // A track the source resolved from a music video says so: the row is the song, not the video.
+      const via = track.video ? `from music video "${track.video}"` : null;
       if (match) {
         const flag = await this.verify(track, match);
-        if (this.target.resolveTrack && flag === null) verified += 1;
-        matchedIds.push(match.id);
-        this.record({ playlist: playlist.name, title: track.name, artist: track.artist, isrc: null, matched: true, target_id: match.id, method: match.method, note: [flag, dryRun ? 'dry-run' : null].filter(Boolean).join('; ') || null });
+        const row = this.record({ playlist: playlist.name, title: track.name, artist: track.artist, isrc: null, matched: true, target_id: match.id, method: match.method, note: [via, flag, dryRun ? 'dry-run' : null].filter(Boolean).join('; ') || null });
+        matched.push({ id: match.id, fromVideo: Boolean(track.video), verified: Boolean(this.target.resolveTrack) && flag === null, row });
         console.log(`  [${i + 1}/${result.tracks.length}] ✓ ${match.method} — ${track.name} — ${track.artist}${flag ? ` — ${flag}` : ''}`);
       } else {
-        this.record({ playlist: playlist.name, title: track.name, artist: track.artist, isrc: null, matched: false, note: dryRun ? 'dry-run: no match' : 'no match' });
+        this.record({ playlist: playlist.name, title: track.name, artist: track.artist, isrc: null, matched: false, note: [dryRun ? 'dry-run: no match' : 'no match', via].filter(Boolean).join('; ') });
         console.log(`  [${i + 1}/${result.tracks.length}] ✗ not found — ${track.name} — ${track.artist}`);
       }
       await sleep(300);
     }
-    const missed = result.tracks.length - matchedIds.length;
-    console.log(this.target.resolveTrack
-      ? `[${playlist.name}] ${matchedIds.length}/${result.tracks.length} matched (${verified} verified${missed ? `, ${missed} match failed` : ''}).`
-      : `[${playlist.name}] ${matchedIds.length}/${result.tracks.length} tracks matched.`);
+    // A music video whose song the playlist also holds as a song gives way to that song, which keeps
+    // its own place. Compared on the target id: the source may carry the two under different ids. A
+    // video with no song twin still converts. `video` is provenance on the Track, not a provider's.
+    const songIds = new Set(matched.filter((m) => !m.fromVideo).map((m) => m.id));
+    const songTwin = (m: (typeof matched)[number]) => m.fromVideo && songIds.has(m.id);
+    const kept = matched.filter((m) => !songTwin(m));
+    const dropped = matched.length - kept.length;
+    for (const m of matched) if (songTwin(m)) Object.assign(m.row, { matched: false, method: null, note: `skipped: music video, its song is already in the playlist (${m.row.target_id})` });
+    const missed = result.tracks.length - matched.length;
+    const verified = kept.filter((m) => m.verified).length;
+    const parts = [this.target.resolveTrack ? `${verified} verified` : null, dropped ? `${dropped} music video${dropped === 1 ? '' : 's'} left out, song already in playlist` : null, missed ? `${missed} match failed` : null].filter(Boolean);
+    console.log(`[${playlist.name}] ${kept.length}/${result.tracks.length} tracks converted${parts.length ? ` (${parts.join(', ')})` : ''}.`);
+    const matchedIds = kept.map((m) => m.id);
     return { matchedIds, total: result.tracks.length, truncated: result.truncated };
   }
 
@@ -77,7 +86,12 @@ export class Conversion {
     if (!this.target.resolveTrack) return null;
     try {
       const meta = await this.target.resolveTrack(match.id);
-      const same = matchCandidates(track.name, track.artist, track.durationMs, [{ id: match.id, title: meta.name, artist: meta.artist, duration: meta.durationMs != null ? Math.round(meta.durationMs / 1000) : null }]);
+      const resolved = [{ id: match.id, title: meta.name, artist: meta.artist, duration: meta.durationMs != null ? Math.round(meta.durationMs / 1000) : null }];
+      // A last-resort match re-checks under the rule that accepted it: a title-only match differs in
+      // its artist by definition, so holding it to matchCandidates would flag every one of them.
+      const same = matchCandidates(track.name, track.artist, track.durationMs, resolved)
+        ?? (match.method === 'title-only' ? matchByTitle(track.name, track.artist, track.durationMs, resolved) : null)
+        ?? (match.method === 'duration-only' ? matchByDuration(track.name, track.artist, track.durationMs, resolved) : null);
       return same ? null : '⚠️ recheck (possibly wrong track)';
     } catch { return '⚠️ verification failed'; }
   }

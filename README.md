@@ -90,7 +90,7 @@ Set credentials in `.env`, export them in your shell, or paste when prompted. Fu
 
 ## Website
 
-[plx.sh](https://plx.sh) — overview, matching rules, and install steps.
+[plx.eleonorez.xyz](https://plx.eleonorez.xyz) — overview, matching rules, and install steps.
 
 <img src="https://raw.githubusercontent.com/samlehoy/plx/master/screenshots/website-landing.png" width="640" alt="plx landing page: Move your playlist. No dev account." />
 

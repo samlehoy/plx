@@ -37,7 +37,7 @@ _Avoid_: method, strategy
 An entry in a provider's music catalog — the canonical release of a recording.
 
 **Music video**:
-A YouTube Music entry backed by a video rather than a catalog release: live sets, covers, user uploads. Accepted as a match only when no song matches, and always flagged.
+A YouTube Music entry backed by a video rather than a catalog release: official videos, live sets, covers, user uploads. In a source playlist it converts as the song it carries: the catalog song its title spells out, by an artist its title or channel names. A music video whose song the playlist also holds as a song is left out, and the song keeps its place. One that carries no catalog song is skipped. As a target candidate it is accepted only when no song matches, and always flagged.
 _Avoid_: video, clip, UGC
 
 ## Credentials
