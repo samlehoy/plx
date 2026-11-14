@@ -227,7 +227,9 @@ async function runConversion(cfg: Config, options: CliOptions): Promise<void> {
       else await confirmAndCreate(conversion, picked.name, result);
     }
   } finally {
-    await conversion.writeReport(); // a failed write must not cost the whole report
+    // A failed write must not cost the whole report. The path it landed at becomes the one the menu
+    // shows, so a fallback location is what the user sees — and where later reports go.
+    options.output = await conversion.writeReport();
   }
   if (picked.ref) await saveRecentUrl(picked.ref);
 }
@@ -337,7 +339,7 @@ async function main() {
       const result = await conversion.matchPlaylist({ name, uri: id }, options.dryRun);
       if (!options.dryRun && result.matchedIds.length) await conversion.writePlaylist(name, result.matchedIds);
     } finally {
-      await conversion.writeReport(); // a failed write must not cost the whole report
+      options.output = await conversion.writeReport(); // a failed write must not cost the whole report
     }
   }
   outro(`Report saved to ${options.output}`);
