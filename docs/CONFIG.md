@@ -123,6 +123,8 @@ else in the file, including `recentUrls`, survives untouched.
 
 Default CSV report path is `conversion_report.csv`. Override with `--output <file>` or the interactive menu's **Report** option.
 
+A relative path resolves against the current directory. If that directory isn't writable (for example `C:\Windows\system32` in a terminal opened as administrator), the report is saved under the same name in your home directory, then the temp directory, and plx prints where it ended up.
+
 Columns: `playlist,source,target,title,artist,isrc,matched,target_id,method,note`. `source` and `target` name the providers, and `target_id` is the matched identifier in the target's own terms — the same meaning in all six directions.
 
 ## Security

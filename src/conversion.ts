@@ -127,5 +127,6 @@ export class Conversion {
     return added;
   }
 
-  async writeReport() { await writeCsv(this.output, this.rows); }
+  // Returns where the report actually landed, which is not `output` when that was unwritable.
+  async writeReport(): Promise<string> { return writeCsv(this.output, this.rows); }
 }
