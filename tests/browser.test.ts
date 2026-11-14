@@ -51,7 +51,9 @@ function chromiumDb(cookies: Array<{ host: string; name: string; value: string }
 }
 
 describe('readChromiumDb', () => {
-  it('returns nothing and skips the Keychain when the DB cannot be opened (e.g. macOS TCC block)', () => {
+  // chmod 0o000 is how this test makes the DB unreadable, and Windows has no read bit: chmod there
+  // only toggles read-only, so the file still opens and the case cannot be staged. Run on POSIX.
+  it.skipIf(process.platform === 'win32')('returns nothing and skips the Keychain when the DB cannot be opened (e.g. macOS TCC block)', () => {
     const path = chromiumDb([{ host: '.deezer.com', name: 'arl', value: 'abc123arl' }]);
     chmodSync(path, 0o000);
     const getPassword = vi.fn(() => 'test-password');
