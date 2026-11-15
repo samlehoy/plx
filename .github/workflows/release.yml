@@ -70,7 +70,8 @@ jobs:
           TAG: ${{ needs.release-please.outputs.tag_name }}
           ZIP: plx-companion-${{ needs.release-please.outputs.version }}.zip
         run: |
-          (cd extension && zip -r "../$ZIP" . -x README.md)
+          # git archive, not zip(1): the zip on ubuntu-26.04 produced no archive at that path.
+          git archive -o "$ZIP" HEAD:extension ':(exclude)README.md'
           gh release upload "$TAG" "$ZIP" --clobber
 
   website:
