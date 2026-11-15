@@ -97,11 +97,11 @@ Set credentials in `.env`, export them in your shell, or paste when prompted. Fu
 ## Development
 
 ```bash
-npm install
-npm run typecheck
-npm test
-npm run lint
-npm run build
+pnpm install
+pnpm run typecheck
+pnpm test
+pnpm run lint
+pnpm run build
 ```
 
 ## Documentation

@@ -24,8 +24,9 @@ Releases are automatic (`.github/workflows/release.yml`, driven by
    | `docs:`, `test:`, `chore:`, `refactor:` | none | hidden |
 
 2. **Every push to `master`** updates a single release PR, titled `chore(master): release x.y.z`.
-   It carries the bumped `package.json`, `package-lock.json`, `extension/manifest.json` and a new
-   `CHANGELOG.md` entry. Merge it when you want to ship.
+   It carries the bumped `package.json`, `extension/manifest.json` and a new
+   `CHANGELOG.md` entry (`pnpm-lock.yaml` records no project version, so it never changes). Merge
+   it when you want to ship.
 3. **Merging it is the release.** release-please tags `vX.Y.Z` and creates the GitHub release. Then:
    - **npm:** the package is published with trusted publishing (OIDC, with provenance), after
      typecheck, lint and tests pass.
@@ -56,8 +57,8 @@ package in `release-please-config.json`, and remove it after that release.
   - The extension manifest matches `package.json`.
   - `web/package.json` carries no version of its own.
   - `plx --version` prints the root version.
-- `npm run version:check` runs as part of `prepublishOnly` and fails on manifest drift.
-  `npm run version:sync` repairs drift by hand.
+- `pnpm run version:check` runs as part of `prepublishOnly` and fails on manifest drift.
+  `pnpm run version:sync` repairs drift by hand.
 - A pull request created with the default `GITHUB_TOKEN` does not trigger other workflows, so CI does
   not run on the release PR itself. The release jobs run the checks again before publishing.
 

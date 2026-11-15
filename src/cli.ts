@@ -14,7 +14,7 @@ function args(): string[] { return process.argv.slice(2); }
 
 // The root package.json is the project's one version (scripts/sync-version.mjs copies it to the
 // extension and the website). Read at runtime rather than imported: it sits outside `rootDir`, and
-// npm always ships it, one level above dist/ (and above src/ under `npm run dev`).
+// npm always ships it, one level above dist/ (and above src/ under `pnpm run dev`).
 function cliVersion(): string {
   return (JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')) as { version: string }).version;
 }
