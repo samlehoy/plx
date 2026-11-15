@@ -7,6 +7,7 @@ import { Conversion } from './conversion.js';
 import { PROVIDERS, inferSource, providerFor, targetKeys, type ProviderSpec } from './registry.js';
 import { HELP_TEXT, parseArgs, type CliOptions } from './args.js';
 import { DEFAULT_SYNC_PORT, DEFAULT_SYNC_TIMEOUT_MS, listenForExtensionSync } from './sync-server.js';
+import { updateNotice } from './update-check.js';
 import type { Provider } from './types.js';
 
 function args(): string[] { return process.argv.slice(2); }
@@ -281,9 +282,11 @@ async function confirmAndCreate(conversion: Conversion, name: string, result: Aw
 
 // Fixed entry count: the two provider-shaped entries (Convert, Credentials) branch by provider
 // rather than listing one option each, so adding a provider never lengthens this menu.
-async function runInteractive(options: CliOptions): Promise<void> {
+async function runInteractive(options: CliOptions, update: Promise<string | null>): Promise<void> {
   intro('plx — playlist converter');
   const cfg = await loadConfig();
+  const notice = await update;
+  if (notice) console.log(notice);
   if (cfg.legacyCredentials) console.log('⚠️ Your saved credentials are in an older format and were not carried over. Re-enter them from Credentials (or use Auto-fetch) — it only takes one browser dialog.');
   for (;;) {
     const saved = PROVIDERS.filter((p) => credential(cfg, p.key)).length;
@@ -347,9 +350,11 @@ async function main() {
   const options = parseArgs(args());
   if (options.help) { console.log(HELP_TEXT); return; }
   if (options.version) { console.log(cliVersion()); return; }
+  // Asked now, alongside startup, and shown once there is a natural place to print a line.
+  const update = updateNotice(cliVersion());
 
   if (!options.urls.length) {
-    await runInteractive(options);
+    await runInteractive(options, update);
     return;
   }
 
@@ -384,6 +389,8 @@ async function main() {
       options.output = await conversion.writeReport(); // a failed write must not cost the whole report
     }
   }
+  const notice = await update;
+  if (notice) console.log(notice);
   outro(`Report saved to ${options.output}`);
 }
 
