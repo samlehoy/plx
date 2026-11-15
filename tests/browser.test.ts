@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { describe, expect, it, vi } from 'vitest';
-import { autoFetchHint, chromiumProfiles, decryptCookie, detectedBrowsers, firefoxProfiles, parseSafariCookies, readChromiumDb, readFirefox } from '../src/browser.js';
+import { autoFetchHint, chromiumProfiles, credentialsFromCookies, decryptCookie, detectedBrowsers, firefoxProfiles, parseSafariCookies, readChromiumDb, readFirefox } from '../src/browser.js';
 import { cookieHeader } from '../src/ytmusic.js';
 
 const key = pbkdf2Sync('test-password', 'saltysalt', 1003, 16, 'sha1');
@@ -204,6 +204,24 @@ describe('readFirefox', () => {
 
   it('returns nothing rather than throwing when the path is not a database', () => {
     expect(readFirefox(join(tmpdir(), 'plx-nonexistent-profile.sqlite'))).toEqual({});
+  });
+});
+
+describe('credentialsFromCookies', () => {
+  // What the Companion extension sends: chrome.cookies rows, host-only and domain cookies mixed,
+  // google-first so the ranking — not row order — has to pick the .youtube.com copy.
+  it('ranks hosts and joins the YouTube Music bundle the way the on-disk backends do', () => {
+    expect(credentialsFromCookies([
+      { host: '.google.com', name: 'SID', value: 'google-copy' },
+      { host: '.youtube.com', name: 'SID', value: 'youtube-copy' },
+      { host: '.youtube.com', name: 'SAPISID', value: 'sap' },
+      { host: '.spotify.com', name: 'sp_dc', value: 'dc' },
+      { host: '.evil.example', name: 'arl', value: 'nope' },
+    ])).toEqual({ spotify: 'dc', ytmusic: 'SAPISID=sap; SID=youtube-copy' });
+  });
+
+  it('yields no YouTube Music credential without a SAPISID variant', () => {
+    expect(credentialsFromCookies([{ host: '.youtube.com', name: 'SID', value: 'sid' }])).toEqual({});
   });
 });
 

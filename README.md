@@ -75,15 +75,15 @@ credential is missing. Manual paste stays the fallback everywhere.
 | Browser | macOS | Windows | Linux |
 |---|---|---|---|
 | Firefox | ✅ | ✅ | ✅ |
-| Chromium family (Brave, Chrome, Edge, Chromium, Vivaldi, Opera) | ✅ | — | — |
+| Chromium family (Brave, Chrome, Edge, Chromium, Vivaldi, Opera) | ✅ | via Companion Extension | — |
 | Safari | ✅ — needs Full Disk Access | — | — |
 
 On macOS the Chromium and Safari backends ask you to accept the Keychain prompt once. Firefox needs
 no prompt on any OS, since it stores cookie values unencrypted.
 
-Chromium on Windows isn't a gap waiting to be filled: since Chrome 127 the cookie key is sealed
-behind App-Bound Encryption that only a SYSTEM-level process can unwrap, and every published
-workaround is the sort of thing malware does. On Windows, use Firefox or paste manually.
+On Windows, Chromium browsers (Chrome 127+, Edge, Brave) protect cookies with App-Bound Encryption,
+so reading SQLite files directly is blocked. Use the included **`plx Companion` extension** (`extension/` folder)
+to sync cookies directly into the CLI with 1 click, use Firefox, or paste manually.
 
 Set credentials in `.env`, export them in your shell, or paste when prompted. Full setup:
 [`docs/CONFIG.md`](docs/CONFIG.md).

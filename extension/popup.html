@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>plx Companion</title>
+  <link rel="preload" href="fonts/bricolage-grotesque-latin-opsz-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <header class="bar">
+    <span class="wordmark">plx<span>.</span></span>
+    <span class="meta-sm">Companion</span>
+  </header>
+
+  <section class="intro">
+    <h1>Send your session <span>to the CLI.</span></h1>
+    <p class="lede">Hands this browser’s logins to plx running on this computer.</p>
+  </section>
+
+  <ul class="providers">
+    <li class="provider">
+      <div>
+        <span class="provider-name">Spotify</span>
+        <span class="provider-key meta-sm" data-provider="spotify">sp_dc</span>
+      </div>
+      <span id="spotify-state" class="state meta-sm" data-state="checking">Checking</span>
+    </li>
+    <li class="provider">
+      <div>
+        <span class="provider-name">Deezer</span>
+        <span class="provider-key meta-sm" data-provider="deezer">arl</span>
+      </div>
+      <span id="deezer-state" class="state meta-sm" data-state="checking">Checking</span>
+    </li>
+    <li class="provider">
+      <div>
+        <span class="provider-name">YouTube Music</span>
+        <span class="provider-key meta-sm" data-provider="ytmusic">sapisid bundle</span>
+      </div>
+      <span id="ytmusic-state" class="state meta-sm" data-state="checking">Checking</span>
+    </li>
+  </ul>
+
+  <section class="action">
+    <button id="btn-sync" class="pill meta" type="button" disabled>Sync to plx</button>
+    <p id="message" class="message" role="status" aria-live="polite"></p>
+  </section>
+
+  <footer class="foot">
+    <span id="endpoint" class="meta-sm"></span>
+    <span id="version" class="meta-sm"></span>
+  </footer>
+
+  <script src="popup.js"></script>
+</body>
+</html>

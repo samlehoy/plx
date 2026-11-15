@@ -294,19 +294,35 @@ function readBrowserProfiles(browser?: BrowserKey): BrowserCredentials[] {
 // browser, locked DB, denied keychain, or TCC block just yields {}. Manual paste stays the fallback.
 export function fetchBrowserCredentials(browser?: BrowserKey): Record<string, string> {
   const credentials: Record<string, string> = {};
+  // A cookie bundle is only a session as a *set* from one profile, so each profile is mapped on its
+  // own and the first profile to yield a provider wins — never merged across profiles, since half of
+  // one login plus half of another authenticates as neither.
   for (const found of readBrowserProfiles(browser)) {
-    if (!credentials.deezer && found.arl) credentials.deezer = found.arl;
-    if (!credentials.spotify && found.sp_dc) credentials.spotify = found.sp_dc;
-    // A cookie bundle is only a session as a *set* from one profile, so it is built per browser and
-    // never merged across them — half of one login plus half of another authenticates as neither.
-    // Both backends funnel through the one joiner, so "which cookies, joined how" is decided in a
-    // single place, and that place is testable without a browser.
-    if (!credentials.ytmusic) {
-      const header = cookieHeader(found);
-      if (header) credentials.ytmusic = header;
+    for (const [provider, value] of Object.entries(providerCredentials(found))) {
+      if (!credentials[provider]) credentials[provider] = value;
     }
   }
   return credentials;
+}
+
+// One profile's cookies (in cookie-name terms) → one opaque credential per provider. Every backend,
+// the Companion extension included, funnels through here and the one YouTube Music joiner, so "which
+// cookies, joined how" is decided in a single place, testable without a browser.
+function providerCredentials(found: BrowserCredentials): Record<string, string> {
+  const credentials: Record<string, string> = {};
+  if (found.arl) credentials.deezer = found.arl;
+  if (found.sp_dc) credentials.spotify = found.sp_dc;
+  const header = cookieHeader(found);
+  if (header) credentials.ytmusic = header;
+  return credentials;
+}
+
+// Raw cookie rows from one browser profile — what the plx Companion extension sends — to one
+// credential per provider, through the same host ranking and joiner as the on-disk backends. This is
+// why the extension carries no list of which cookies matter or how they combine: it ships the rows,
+// and the CLI decides.
+export function credentialsFromCookies(rows: Array<{ name: string; host: string; value: string }>): Record<string, string> {
+  return providerCredentials(collect(rows));
 }
 
 // Why auto-fetch came back empty, said in the terms of the platform the user is actually on. macOS
@@ -331,5 +347,5 @@ export function autoFetchHint(os: string = platform(), firefoxFound = firefoxPro
   const why = os === 'win32'
     ? 'Chrome/Edge cookies are sealed by App-Bound Encryption that only a SYSTEM process can unwrap'
     : 'the Chromium keyring backends are not implemented here';
-  return `Auto-fetch supports Firefox only on this OS and no Firefox profile was found — ${why}.`;
+  return `Direct auto-fetch supports Firefox only on this OS (${why}) — use the plx Companion extension for Chrome/Edge/Brave, or paste manually.`;
 }

@@ -1,13 +1,22 @@
 #!/usr/bin/env node
+import { readFileSync } from 'node:fs';
 import { confirm, intro, isCancel, outro, password, select, text } from '@clack/prompts';
 import { autoFetchHint, detectedBrowsers, type BrowserKey } from './browser.js';
-import { credential, loadConfig, saveCredential, saveRecentUrl, tryAutoFillCredentials, type Config } from './config.js';
+import { credential, fillCredentials, loadConfig, saveCredential, saveRecentUrl, tryAutoFillCredentials, type Config } from './config.js';
 import { Conversion } from './conversion.js';
 import { PROVIDERS, inferSource, providerFor, targetKeys, type ProviderSpec } from './registry.js';
 import { HELP_TEXT, parseArgs, type CliOptions } from './args.js';
+import { DEFAULT_SYNC_PORT, DEFAULT_SYNC_TIMEOUT_MS, listenForExtensionSync } from './sync-server.js';
 import type { Provider } from './types.js';
 
 function args(): string[] { return process.argv.slice(2); }
+
+// The root package.json is the project's one version (scripts/sync-version.mjs copies it to the
+// extension and the website). Read at runtime rather than imported: it sits outside `rootDir`, and
+// npm always ships it, one level above dist/ (and above src/ under `npm run dev`).
+function cliVersion(): string {
+  return (JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')) as { version: string }).version;
+}
 
 // --- Credentials -----------------------------------------------------------
 
@@ -28,22 +37,38 @@ async function promptCredential(cfg: Config, spec: ProviderSpec): Promise<boolea
   return true;
 }
 
-// Pick which detected browser to read from, or 'manual' to paste directly. When no supported
-// browser is detected on this OS, explains why and goes straight to the manual paste.
-async function chooseCredentialSource(spec: ProviderSpec): Promise<BrowserKey | 'manual' | null> {
+// Pick which detected browser to read from, extension sync, or 'manual' to paste directly. When no
+// supported browser is detected on this OS, says why before offering the other two.
+async function chooseCredentialSource(spec: ProviderSpec): Promise<BrowserKey | 'extension' | 'manual' | null> {
   const browsers = detectedBrowsers();
-  if (!browsers.length) {
-    explainAutoFetchFailure(spec);
-    return 'manual';
-  }
+  if (!browsers.length) explainAutoFetchFailure(spec);
+  const options = [
+    ...browsers.map((b) => ({ value: b.key as BrowserKey | 'extension' | 'manual', label: `Auto-fetch from ${b.label}` })),
+    { value: 'extension' as const, label: 'Sync via Browser Extension (Chrome / Edge / Brave)' },
+    { value: 'manual' as const, label: 'Paste cookies manually' },
+  ];
   const how = await select({
     message: `${spec.credentialLabel}`,
-    options: [
-      ...browsers.map((b) => ({ value: b.key, label: `Auto-fetch from ${b.label}` })),
-      { value: 'manual' as const, label: 'Paste cookies manually' },
-    ],
+    options,
   });
   return isCancel(how) ? null : how;
+}
+
+// Receive credentials from the plx Companion browser extension over local HTTP, persisted under the
+// same fill rules as a browser read. Never throws: a busy port is reported and fills nothing.
+async function syncFromExtension(cfg: Config, overwrite: boolean, only?: string): Promise<string[]> {
+  try {
+    const found = await listenForExtensionSync({
+      onListening: () => {
+        console.log(`📡 Waiting for the plx Companion extension on http://127.0.0.1:${DEFAULT_SYNC_PORT} (${DEFAULT_SYNC_TIMEOUT_MS / 1000}s)…`);
+        console.log('   In Chrome/Edge/Brave, click the plx Companion icon → "Sync to plx CLI".');
+      },
+    });
+    return await fillCredentials(cfg, found, overwrite, only);
+  } catch (err) {
+    console.log(`✗ ${(err as Error).message}`);
+    return [];
+  }
 }
 
 // Choose a detected browser (or manual paste) and populate `spec`'s credential, falling back to
@@ -51,6 +76,13 @@ async function chooseCredentialSource(spec: ProviderSpec): Promise<BrowserKey | 
 async function acquireCredential(cfg: Config, spec: ProviderSpec, overwrite: boolean, only?: string): Promise<boolean> {
   const source = await chooseCredentialSource(spec);
   if (!source) return false;
+  if (source === 'extension') {
+    const filled = await syncFromExtension(cfg, overwrite, only);
+    if (filled.includes(spec.key)) return true;
+    console.log(`✗ ${spec.label} cookies were not received from the extension.`);
+    console.log('   Paste it manually instead:');
+    return promptCredential(cfg, spec);
+  }
   if (source !== 'manual') {
     warnLogin(spec.loginSite);
     if ((await tryAutoFillCredentials(cfg, overwrite, only, source)).includes(spec.key)) return true;
@@ -111,15 +143,16 @@ function warnLogin(sites: string): void {
   console.log(`⚠️ Make sure you're logged in at ${sites} in your browser, then grab the credentials.`);
 }
 
-async function pickBrowser(): Promise<BrowserKey | null> {
+async function pickBrowser(): Promise<BrowserKey | 'extension' | null> {
   const browsers = detectedBrowsers();
-  if (!browsers.length) {
-    explainAutoFetchFailure();
-    return null;
-  }
+  if (!browsers.length) explainAutoFetchFailure();
+  const options = [
+    ...browsers.map((b) => ({ value: b.key as BrowserKey | 'extension', label: b.label })),
+    { value: 'extension' as const, label: 'Browser Extension (Chrome / Edge / Brave)' },
+  ];
   const pick = await select({
-    message: 'From which browser?',
-    options: browsers.map((b) => ({ value: b.key, label: b.label })),
+    message: 'From which source?',
+    options,
   });
   return isCancel(pick) ? null : pick;
 }
@@ -272,15 +305,23 @@ async function runInteractive(options: CliOptions): Promise<void> {
       continue;
     }
     if (choice === 'autofetch') {
-      const browser = await pickBrowser();
-      if (browser) {
+      const source = await pickBrowser();
+      if (source === 'extension') {
+        const filled = await syncFromExtension(cfg, true);
+        if (filled.length) {
+          console.log(`Synced from extension: ${filled.join(', ')}. Checking…`);
+          for (const key of filled) { const spec = providerFor(key); if (spec) await report(cfg, spec); }
+        } else {
+          console.log('✗ No credentials received from extension.');
+        }
+      } else if (source) {
         warnLogin(PROVIDERS.map((p) => p.label).join(' & '));
-        const filled = await tryAutoFillCredentials(cfg, true, undefined, browser);
+        const filled = await tryAutoFillCredentials(cfg, true, undefined, source);
         if (filled.length) {
           console.log(`Fetched from browser: ${filled.join(', ')}. Checking…`);
           for (const key of filled) { const spec = providerFor(key); if (spec) await report(cfg, spec); }
         } else {
-          explainAutoFetchFailure(undefined, browser);
+          explainAutoFetchFailure(undefined, source);
         }
       }
       // Whatever auto-fetch managed, the manual path is what closes the gap — name it and the menu
@@ -305,6 +346,7 @@ async function runInteractive(options: CliOptions): Promise<void> {
 async function main() {
   const options = parseArgs(args());
   if (options.help) { console.log(HELP_TEXT); return; }
+  if (options.version) { console.log(cliVersion()); return; }
 
   if (!options.urls.length) {
     await runInteractive(options);

@@ -4,6 +4,7 @@ export type CliOptions = {
   dryRun: boolean;
   output: string;
   help: boolean;
+  version: boolean;
 };
 
 export const HELP_TEXT = `plx — playlist converter
@@ -20,6 +21,7 @@ Options:
   -o, --output <file>     CSV report path (default: conversion_report.csv)
   -d, --dry-run           match only; do not create or modify any playlist
   -h, --help              show this help
+  -v, --version           print the plx version
 
 Examples:
   plx --url https://open.spotify.com/playlist/37i9dQZF1DXcBWIGoYBM5M --to deezer
@@ -30,12 +32,13 @@ Examples:
 `;
 
 export function parseArgs(argv: string[]): CliOptions {
-  const options: CliOptions = { urls: [], target: null, dryRun: false, output: 'conversion_report.csv', help: false };
+  const options: CliOptions = { urls: [], target: null, dryRun: false, output: 'conversion_report.csv', help: false, version: false };
   const takeValue = (i: number, inline: string | undefined): { value: string | undefined; next: number } =>
     inline !== undefined ? { value: inline, next: i + 1 } : { value: argv[i + 1], next: i + 2 };
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i];
     if (arg === '--help' || arg === '-h') { options.help = true; continue; }
+    if (arg === '--version' || arg === '-v') { options.version = true; continue; }
     if (arg === '--dry-run' || arg === '-d') { options.dryRun = true; continue; }
     const flagMatch = arg.match(/^(--\w[\w-]*|-\w)=(.+)$/);
     const flag = flagMatch ? flagMatch[1] : arg;

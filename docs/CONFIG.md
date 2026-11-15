@@ -56,10 +56,15 @@ browser** that you pick from the detected browsers on your machine:
   **Full Disk Access** in System Settings → Privacy & Security), and **Firefox**
   (when a Firefox profile exists).
 - **Windows & Linux**: **Firefox** (plaintext `cookies.sqlite`, newest profile first).
+- **Chrome / Edge / Brave on Windows**: Use the included **`plx Companion` extension**
+  (`extension/` folder). Chromium v127+ uses App-Bound Encryption on Windows, so the
+  cleanest path is syncing directly from inside the browser. Load `extension/` unpacked
+  in `chrome://extensions` (or `edge://extensions` / `brave://extensions`), then pick
+  **"Sync via Browser Extension"** in `plx`.
 
 Pick **"Auto-fetch credentials (from browser)"** from the menu and choose your
-browser, or pick **`Auto-fetch from <Browser>`** when prompted for a credential.
-Manual paste stays the fallback everywhere else.
+browser or **"Browser Extension"**, or pick **`Sync via Browser Extension`** when
+prompted for a credential. Manual paste stays the fallback everywhere else.
 
 Each credential it finds is then checked against the live service, so you are told
 whether it actually works rather than just that it was saved.

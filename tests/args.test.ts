@@ -14,6 +14,8 @@ describe('parseArgs', () => {
     expect(parseArgs(['-u', 'abc', '-t', 'spotify']).target).toBe('spotify');
     expect(parseArgs(['--url=abc', '--to=deezer']).target).toBe('deezer');
     expect(parseArgs(['--dry-run', '-d']).dryRun).toBe(true);
+    expect(parseArgs(['--version']).version).toBe(true);
+    expect(parseArgs(['-v']).version).toBe(true);
   });
 
   it('leaves the target unset when none is given, rather than defaulting to one', () => {
