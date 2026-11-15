@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "plx Companion",
-  "version": "0.1.9",
+  "version": "0.2.0",
   "description": "Sync browser session credentials from Chrome, Edge, or Brave to plx CLI",
   "permissions": [
     "cookies"
