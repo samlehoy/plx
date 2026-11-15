@@ -11,5 +11,4 @@
 
 ### Bug Fixes
 
-* save the report elsewhere when the current folder is read-only ([ac650e3](https://github.com/samlehoy/plx/commit/ac650e36793c43fc153527ce5a52c08a85cae19d))
 * save the report elsewhere when the current folder is read-only ([9fb0ac0](https://github.com/samlehoy/plx/commit/9fb0ac00a333e9ef833739118d4785165cbdba7e))
