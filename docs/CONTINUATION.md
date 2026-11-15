@@ -2,7 +2,40 @@
 
 **Handoff log for the next session.** This file tracks what changed and what's left. For *how the system works* read `ARCHITECTURE.md`; for *setup/credentials* read `CONFIG.md`.
 
-Updated: 2026-11-09
+Updated: 2026-11-15
+
+## 2026-11-15 — one version, released automatically (npm, extension, website)
+
+- **Before this change**: no two places agreed.
+  - npm had published `0.1.9`, but `package.json` said `0.1.8`.
+  - Git tags stopped at `v0.1.5`.
+  - The website hardcoded `0.1.5`, `web/package.json` said `0.1.2`, and the extension said `0.1.0`.
+  - The site told users to run `plx --version`, which did not exist.
+- **Single source**: the root `package.json`.
+  - `plx --version` / `-v` was added.
+  - The website reads the version at build time; `web/package.json` no longer has one.
+  - The extension manifest is the only copy.
+  - `tests/version.test.ts` and `version:check` (in `prepublishOnly`) fail on drift.
+- **Automatic releases**: release-please, configured in `.github/workflows/release.yml`, `release-please-config.json` and `.release-please-manifest.json`.
+  - Conventional Commits on `master` keep a release PR open.
+  - Merging that PR tags the version, publishes to npm (trusted publishing, OIDC), attaches the extension zip to the GitHub release, and deploys the site (only once the Cloudflare secrets exist).
+  - Process and one-time setup are in `docs/RELEASING.md`.
+- **The tree is at `0.1.9`** (the last real release). release-please will propose `0.2.0` from the `feat:` commits for the extension.
+- **Tags `v0.1.6`–`v0.1.9` were backfilled locally** from the npm `gitHead` of each version. `v0.1.9` sits on `51c9b22`, verified byte-identical to the npm tarball, because its real commit was never pushed. The tags still need `git push origin --tags`.
+- **Still to do by hand**: the one-time setup in `docs/RELEASING.md` (npm trusted publisher, the GitHub "allow Actions to create PRs" setting, optional Cloudflare secrets).
+
+## 2026-11-15 — Chromium companion browser extension & CLI sync for Windows
+
+- **Companion extension in `extension/`**: Manifest V3 (plain HTML/JS, zero dependencies). It sends the raw cookie rows for the provider domains as `{ cookies: [{ name, domain, value }] }`. The CLI turns them into credentials with `credentialsFromCookies` (`src/browser.ts`), using the same host ranking and YouTube Music joiner as the on-disk readers, so the extension carries no copy of `YTMUSIC_COOKIES`. The "Copy JSON" button was dropped: it needed that copy.
+- **Local HTTP sync server in `src/sync-server.ts`**: a temporary server on `127.0.0.1:DEFAULT_SYNC_PORT`.
+  - **Origin**: any request with a non-`chrome-extension://` Origin gets a 403, which stops an open web tab from planting its own cookies.
+  - **Private Network Access**: the preflight is answered.
+  - **Bad requests**: a request with no usable session gets a 400 and the server keeps waiting.
+  - **Listen errors**: the promise rejects (e.g. "port already in use"), so the CLI can say why. Before, this resolved silently as "nothing received".
+- **Integrated into CLI (`src/cli.ts`)**: "Sync via Browser Extension" is offered in `chooseCredentialSource` and the `autofetch` main menu action.
+  - **Saving**: received credentials go through `fillCredentials` (`src/config.ts`, shared with `tryAutoFillCredentials`), which respects `overwrite`/`only`/env vars and does one write.
+  - **No browser detected**: the "why no direct auto-fetch" hint is still printed.
+- **Updated documentation**: `README.md` and `docs/CONFIG.md` updated to document the companion extension flow for Windows Chromium users.
 
 ## 2026-11-10 — review fixes on the matcher and music-video work
 
