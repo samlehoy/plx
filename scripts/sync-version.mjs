@@ -31,7 +31,7 @@ const manifest = JSON.parse(before);
 if (manifest.version === version) {
   console.log(`${MANIFEST} already at ${version}`);
 } else if (check) {
-  console.error(`${MANIFEST} is at ${manifest.version}, package.json at ${version}. Run: npm run version:sync`);
+  console.error(`${MANIFEST} is at ${manifest.version}, package.json at ${version}. Run: pnpm run version:sync`);
   process.exit(1);
 } else {
   manifest.version = version;
