@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { mkdtemp, readFile, writeFile, mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
-import { credential, configDir, loadConfig, saveCredential, saveRecentUrl, tryAutoFillCredentials } from '../src/config.js';
+import { credential, configDir, fillCredentials, loadConfig, saveCredential, saveRecentUrl, tryAutoFillCredentials } from '../src/config.js';
 
 vi.mock('../src/browser.js', () => ({ fetchBrowserCredentials: vi.fn(() => ({})) }));
 const { fetchBrowserCredentials } = await import('../src/browser.js');
@@ -143,5 +143,20 @@ describe('browser auto-fill', () => {
     const cfg = await loadConfig();
     expect(await tryAutoFillCredentials(cfg, true, 'spotify', 'brave')).toEqual(['spotify']);
     expect(fetchBrowserCredentials).toHaveBeenCalledWith('brave');
+  });
+});
+
+describe('fillCredentials (extension sync)', () => {
+  it('lets an env var win over a synced credential unless overwriting', async () => {
+    process.env.DEEZER_ARL = 'env-arl';
+    const cfg = await loadConfig();
+    expect(await fillCredentials(cfg, { deezer: 'synced-arl', spotify: 'synced-dc' })).toEqual(['spotify']);
+    expect(credential(cfg, 'deezer')).toBe('env-arl');
+  });
+
+  it('writes every filled provider in one go, scoped by `only`', async () => {
+    const cfg = await loadConfig();
+    expect(await fillCredentials(cfg, { deezer: 'a', spotify: 'b' }, true, 'deezer')).toEqual(['deezer']);
+    expect((await readStored()).credentials).toEqual({ deezer: 'a' });
   });
 });

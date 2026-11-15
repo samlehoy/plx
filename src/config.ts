@@ -75,8 +75,16 @@ async function write(patch: Partial<Stored>): Promise<void> {
 export async function tryAutoFillCredentials(cfg: Config, overwrite = false, only?: string, browser?: BrowserKey): Promise<string[]> {
   const wanted = only ? [only] : Object.keys(ENV_VAR);
   if (!overwrite && wanted.every((provider) => cfg.credentials[provider])) return [];
+  return fillCredentials(cfg, fetchBrowserCredentials(browser), overwrite, only);
+}
+
+// Persist provider credentials that arrived from somewhere other than a paste (a browser read, the
+// Companion extension) under one set of rules: existing credentials — env vars included — win unless
+// `overwrite`, `only` confines the fill to one provider, and whatever is filled lands in one write.
+export async function fillCredentials(cfg: Config, found: Record<string, string>, overwrite = false, only?: string): Promise<string[]> {
+  const wanted = only ? [only] : Object.keys(ENV_VAR);
   const filled: string[] = [];
-  for (const [provider, value] of Object.entries(fetchBrowserCredentials(browser))) {
+  for (const [provider, value] of Object.entries(found)) {
     if (!value || !wanted.includes(provider) || (!overwrite && cfg.credentials[provider])) continue;
     cfg.credentials[provider] = value;
     filled.push(provider);
