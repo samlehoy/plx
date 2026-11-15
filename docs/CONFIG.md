@@ -91,6 +91,9 @@ conversion that needs a credential is asked for one, so **neither is required in
 | `SPOTIFY_DC` | writing to a Spotify target, or reading your private Spotify playlists | Spotify web session cookie. |
 | `YTMUSIC_COOKIE` | any conversion involving YouTube Music | A whole `Cookie:` header, not a single cookie — Google needs a bundle. |
 
+`NO_UPDATE_NOTIFIER=1` stops plx from asking npm whether a newer version exists. The check runs only
+on a terminal, waits at most 1.5s, and stays silent when offline.
+
 ## Config directory
 
 `loadConfig` reads `credentials.json` from the platform config dir:
