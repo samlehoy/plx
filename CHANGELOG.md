@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.0](https://github.com/samlehoy/plx/compare/v0.2.0...v0.3.0) (2026-11-15)
+
+
+### Features
+
+* tell the user when a newer plx is on npm ([#25](https://github.com/samlehoy/plx/issues/25)) ([59dc1af](https://github.com/samlehoy/plx/commit/59dc1aff14a9f2c858f133e16662805f6e74a18a))
+
 ## [0.2.0](https://github.com/samlehoy/plx/compare/v0.1.9...v0.2.0) (2026-11-15)
 
 
